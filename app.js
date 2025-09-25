@@ -265,10 +265,13 @@ function renderStep1Content(container, submitFn) {
 }
 async function validateSession1(e) {
     e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, 'Validando...');
     if (document.getElementById('session1Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion1.toUpperCase()) {
         await updateUserProgress('step1_completed', true);
     } else {
         showModal('Error', 'Palabra clave incorrecta.');
+        setButtonLoading(button, false);
     }
 }
 
@@ -295,10 +298,11 @@ function renderModuleContent(container, moduleIndex) {
         </div>
     `;
     
-    // Initialize counters
     module.temas.forEach(tema => updateCharCounter(`comment_${tema.id}`, `counter_${tema.id}`));
 
-    document.getElementById(`completeModuleBtn_${moduleIndex}`).onclick = async () => {
+    const completeBtn = document.getElementById(`completeModuleBtn_${moduleIndex}`);
+    completeBtn.onclick = async () => {
+        setButtonLoading(completeBtn, true, 'Guardando...');
         let allValid = true;
         if (!progress.comments) progress.comments = {};
         module.temas.forEach(tema => {
@@ -313,6 +317,7 @@ function renderModuleContent(container, moduleIndex) {
             await updateUserProgress(stepKey, true);
         } else {
             showModal('Incompleto', 'Debe escribir una reflexión de al menos 50 caracteres para cada tema.');
+            setButtonLoading(completeBtn, false);
         }
     };
 }
@@ -328,17 +333,19 @@ function renderStep3Content(container, submitFn) {
 }
 async function validateSession2(e) {
     e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, 'Validando...');
     if (document.getElementById('session2Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion2.toUpperCase()) {
         await updateUserProgress('step3_completed', true);
     } else {
         showModal('Error', 'Palabra clave incorrecta.');
+        setButtonLoading(button, false);
     }
 }
 
 function renderEvaluationContent(container, submitFn) {
     const progress = participantProgress[currentUser.dni];
     
-    // Final check: if user has already approved, show completion message and block form.
     if (progress.eval_aprobado) {
         container.innerHTML = `<div class="success-message">Ya has completado y aprobado esta evaluación.</div>`;
         return;
@@ -382,11 +389,11 @@ function renderEvaluationContent(container, submitFn) {
                 <div class="form-actions"><button type="submit" class="btn btn--primary">Enviar Evaluación</button></div>
             </form>
         </div>
+        <div id="examResultContainer" style="display:none;"></div>
         <div id="examResultActions" class="form-actions" style="display:none; justify-content: center; margin-top: 20px;">
             <button id="retryExamBtn" class="btn btn--primary">Reintentar Evaluación</button>
         </div>`;
 
-    // Initialize counters for case study
     caseStudy.preguntas.forEach((_, i) => updateCharCounter(`cp${i}`, `counter_cp${i}`));
     
     document.getElementById('examForm').addEventListener('submit', submitFn);
@@ -400,11 +407,7 @@ async function submitExam(e) {
     const form = e.target;
     const submitButton = form.querySelector('button[type="submit"]');
 
-    // --- FIX: Disable button immediately to prevent multiple submissions ---
-    submitButton.disabled = true;
-    submitButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Enviando...`;
-    
-    showSpinner(true);
+    setButtonLoading(submitButton, true, 'Enviando...');
     
     const formData = new FormData(form);
     const userAnswers = { mc: {}, case: {} };
@@ -416,9 +419,7 @@ async function submitExam(e) {
         if (userAnswer === q.correcta) score++;
     });
     appData.evaluacion.caso_practico.preguntas.forEach((cp, i) => userAnswers.case[`cp${i}`] = formData.get(`cp${i}`));
-
-    showExamResults(userAnswers.mc);
-
+    
     const progress = participantProgress[currentUser.dni];
     const newIntentos = (progress.eval_intentos || 0) + 1;
     const passed = score >= appData.configuracion.nota_minima_aprobacion;
@@ -430,8 +431,31 @@ async function submitExam(e) {
         answers_json: JSON.stringify(userAnswers) 
     };
     const response = await postDataToGoogleSheet('saveExamAttempt', attemptData);
+
+    await updateUserProgress('eval_intentos', newIntentos);
+    await updateUserProgress('eval_aprobado', progress.eval_aprobado || passed);
+    await updateUserProgress('step5_completed', progress.step5_completed || passed);
+    await updateUserProgress('last_case_answers', userAnswers.case);
+
+    document.getElementById('examContainer').style.display = 'none';
     
-    showSpinner(false);
+    const resultContainer = document.getElementById('examResultContainer');
+    resultContainer.style.display = 'block';
+    resultContainer.innerHTML = appData.evaluacion.preguntas.map((q, i) => {
+        const isCorrect = userAnswers.mc[i] === q.correcta;
+        return `
+        <div class="question-item ${isCorrect ? 'correct' : 'incorrect'}">
+            <p class="question-text">${i + 1}. ${q.texto}</p>
+            <div class="question-options">
+            ${q.opciones.map((opt, j) => {
+                let className = 'option-item';
+                if (j === q.correcta) className += ' correct-answer';
+                if (j === userAnswers.mc[i] && !isCorrect) className += ' incorrect';
+                return `<div class="${className}"><span>${opt}</span></div>`;
+            }).join('')}
+            </div>
+        </div>`;
+    }).join('');
 
     if (passed) {
         const certCode = response.certificate_code;
@@ -445,14 +469,6 @@ async function submitExam(e) {
         }
         showModal('Intento Registrado', message);
     }
-
-    // Disable the form fields, but keep the submit button disabled to prevent re-submission of the same data
-    form.querySelectorAll('input, textarea').forEach(el => el.disabled = true);
-    
-    await updateUserProgress('eval_intentos', newIntentos);
-    await updateUserProgress('eval_aprobado', progress.eval_aprobado || passed);
-    await updateUserProgress('step5_completed', progress.step5_completed || passed);
-    await updateUserProgress('last_case_answers', userAnswers.case);
 }
 
 // --- DATA & UTILITIES ---
@@ -479,21 +495,6 @@ async function updateUserProgress(key, value) {
     participantProgress[currentUser.dni][key] = value;
     await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: participantProgress[currentUser.dni] });
     updateCertificationSteps();
-}
-function showExamResults(userAnswers) {
-    appData.evaluacion.preguntas.forEach((q, i) => {
-        const correctAnswer = q.correcta;
-        document.querySelectorAll(`input[name="q${i}"]`).forEach((radio, j) => {
-            const label = radio.parentElement;
-            label.classList.remove('correct', 'incorrect', 'correct-answer');
-            if (j === correctAnswer) {
-                label.classList.add('correct-answer');
-            }
-            if (j === userAnswers[i]) {
-                label.classList.add(userAnswers[i] === correctAnswer ? 'correct' : 'incorrect');
-            }
-        });
-    });
 }
 function buildControlUnificado() {
     const map = new Map();
@@ -535,7 +536,19 @@ function updateCharCounter(textAreaId, counterId) {
         counter.textContent = `${currentLength} / ${maxLength} caracteres`;
     }
 }
-
+function setButtonLoading(button, isLoading, loadingText = 'Cargando...') {
+    if (!button) return;
+    if (isLoading) {
+        button.originalHTML = button.innerHTML;
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
+        button.disabled = true;
+    } else {
+        if (button.originalHTML) {
+            button.innerHTML = button.originalHTML;
+        }
+        button.disabled = false;
+    }
+}
 function isStepCompleted(step) { return participantProgress[currentUser.dni]?.[`${step}_completed`]; }
 function handleLogout() { currentUser = null; showSection('loginSection'); }
 function updateStudentInfo() { document.getElementById('studentName').textContent = currentUser.nombre_completo; document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`; }

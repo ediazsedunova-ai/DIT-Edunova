@@ -37,7 +37,7 @@ async function loadDataFromGoogleSheet() {
         initializeSystemData();
     } catch (error) {
         console.error('❌ Failed to load data:', error);
-        showModal('Error Crítico de Carga', `No se pudieron cargar los datos.<br><br><b>Mensaje:</b> ${error.message}<br><br>Revisa la consola (F12) y los registros en Apps Script.`);
+        showModal('Error Crítico de Carga', `No se pudieron cargar los datos desde Google Sheets.<br><br><b>Mensaje del Servidor:</b><br><i>${error.message}</i><br><br><b>Posibles Soluciones:</b><br>1. Verifica que la URL en <code>app.js</code> es correcta.<br>2. Revisa que todas las pestañas en tu Google Sheet tengan el nombre exacto pedido en las instrucciones.<br>3. Asegúrate de haber implementado el script para que "Cualquier usuario" tenga acceso.`);
     }
 }
 
@@ -391,7 +391,7 @@ function renderEvaluationContent(container, submitFn) {
     
     document.getElementById('examForm').addEventListener('submit', submitFn);
     document.getElementById('retryExamBtn').addEventListener('click', () => {
-         renderEvaluationContent(document.getElementById('step5Content'), submitExam);
+         renderEvaluationContent(document.getElementById('step5Content'), submitFn);
     });
 }
 

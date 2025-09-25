@@ -74,6 +74,7 @@ function handleLogin(e) {
         showError('loginError', 'DNI inválido. Debe contener 8 dígitos.');
         return;
     }
+    // Consistent string comparison
     const participant = controlUnificado.find(u => u.dni && u.dni.toString() === dni);
     if (participant) {
         currentUser = participant;
@@ -173,7 +174,7 @@ function showAdminPanel() {
         const progress = participantProgress[p.dni] || {};
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${p.dni}</td>
+            <td>'${p.dni}</td>
             <td>${p.nombre_completo}</td>
             <td>${getStatusBadge(progress.step1_completed)}</td>
             <td>${getStatusBadge(progress.step2_completed)}</td>
@@ -197,7 +198,7 @@ function exportProgressToCsv() {
     controlUnificado.forEach(p => {
         const progress = participantProgress[p.dni] || {};
         const row = [
-            p.dni, `"${p.nombre_completo}"`,
+            `'${p.dni}`, `"${p.nombre_completo}"`,
             progress.step1_completed ? 'SI' : 'NO', progress.step2_completed ? 'SI' : 'NO',
             progress.step3_completed ? 'SI' : 'NO', progress.step4_completed ? 'SI' : 'NO',
             progress.step5_completed ? 'SI' : 'NO', progress.eval_aprobado ? 'SI' : 'NO',
@@ -511,13 +512,23 @@ async function updateUserProgress(key, value) {
 }
 function buildControlUnificado() {
     const map = new Map();
-    [...appData.matriculados, ...appData.nuevos_registros].forEach(p => {
-        if (p.dni) {
-            map.set(p.dni.toString(), { ...p, dni: p.dni.toString(), nombre_completo: `${p.nombres} ${p.apellidos}`.trim() });
-        }
-    });
+    // Ensure all DNI are strings for consistent matching
+    const processList = (list) => {
+        if (!Array.isArray(list)) return;
+        list.forEach(p => {
+            if (p.dni) {
+                const dniStr = p.dni.toString();
+                if (!map.has(dniStr)) {
+                    map.set(dniStr, { ...p, dni: dniStr, nombre_completo: `${p.nombres || ''} ${p.apellidos || ''}`.trim() });
+                }
+            }
+        });
+    };
+    processList(appData.matriculados);
+    processList(appData.nuevos_registros);
     controlUnificado = Array.from(map.values());
 }
+
 
 function initializeAllProgress() {
     controlUnificado.forEach(p => {

@@ -271,7 +271,7 @@ async function validateSession1(e) {
         await updateUserProgress('step1_completed', true);
     } else {
         showModal('Error', 'Palabra clave incorrecta.');
-        setButtonLoading(button, false);
+        setButtonLoading(button, false, 'Validar');
     }
 }
 
@@ -317,7 +317,7 @@ function renderModuleContent(container, moduleIndex) {
             await updateUserProgress(stepKey, true);
         } else {
             showModal('Incompleto', 'Debe escribir una reflexión de al menos 50 caracteres para cada tema.');
-            setButtonLoading(completeBtn, false);
+            setButtonLoading(completeBtn, false, 'Guardar y Completar Módulo');
         }
     };
 }
@@ -339,7 +339,7 @@ async function validateSession2(e) {
         await updateUserProgress('step3_completed', true);
     } else {
         showModal('Error', 'Palabra clave incorrecta.');
-        setButtonLoading(button, false);
+        setButtonLoading(button, false, 'Validar');
     }
 }
 
@@ -432,11 +432,19 @@ async function submitExam(e) {
     };
     const response = await postDataToGoogleSheet('saveExamAttempt', attemptData);
 
-    await updateUserProgress('eval_intentos', newIntentos);
-    await updateUserProgress('eval_aprobado', progress.eval_aprobado || passed);
-    await updateUserProgress('step5_completed', progress.step5_completed || passed);
-    await updateUserProgress('last_case_answers', userAnswers.case);
+    // Update local progress data first for immediate UI feedback
+    progress.eval_intentos = newIntentos;
+    progress.eval_aprobado = progress.eval_aprobado || passed;
+    progress.step5_completed = progress.step5_completed || passed;
+    progress.last_case_answers = userAnswers.case;
+    if (passed && response.certificate_code) {
+        progress.certificate_code = response.certificate_code;
+        progress.final_score = score;
+    }
 
+    // Now, send the final complete progress object to be saved.
+    await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: progress });
+    
     document.getElementById('examContainer').style.display = 'none';
     
     const resultContainer = document.getElementById('examResultContainer');
@@ -458,8 +466,9 @@ async function submitExam(e) {
     }).join('');
 
     if (passed) {
-        const certCode = response.certificate_code;
-        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${certCode}</strong><br>Podrás descargarlo en las próximas horas en el siguiente enlace: <a href="https://edunova.edu.pe/verify/" target="_blank">edunova.edu.pe/verify/</a>`);
+        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${response.certificate_code}</strong><br>Podrás descargarlo en las próximas horas en el siguiente enlace: <a href="https://edunova.edu.pe/verify/" target="_blank">edunova.edu.pe/verify/</a>`, () => {
+            updateCertificationSteps(); // This will refresh the entire view
+        });
     } else {
         const remaining = appData.configuracion.max_intentos_evaluacion - newIntentos;
         let message = `Tu puntaje es ${score}/${appData.evaluacion.preguntas.length}. Te quedan ${remaining} intentos.`;
@@ -539,7 +548,9 @@ function updateCharCounter(textAreaId, counterId) {
 function setButtonLoading(button, isLoading, loadingText = 'Cargando...') {
     if (!button) return;
     if (isLoading) {
-        button.originalHTML = button.innerHTML;
+        if (!button.originalHTML) {
+            button.originalHTML = button.innerHTML;
+        }
         button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
         button.disabled = true;
     } else {
@@ -552,7 +563,16 @@ function setButtonLoading(button, isLoading, loadingText = 'Cargando...') {
 function isStepCompleted(step) { return participantProgress[currentUser.dni]?.[`${step}_completed`]; }
 function handleLogout() { currentUser = null; showSection('loginSection'); }
 function updateStudentInfo() { document.getElementById('studentName').textContent = currentUser.nombre_completo; document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`; }
-function updateCertificateSection() { const s = document.getElementById('certificateSection'); const p = participantProgress[currentUser.dni]; if (p?.certificate_code) { document.getElementById('certificateCode').textContent = p.certificate_code; s.style.display = 'block'; } else { s.style.display = 'none'; } }
+function updateCertificateSection() { 
+    const s = document.getElementById('certificateSection'); 
+    const p = participantProgress[currentUser.dni]; 
+    if (p?.certificate_code) { 
+        document.getElementById('certificateCode').textContent = p.certificate_code; 
+        s.style.display = 'block'; 
+    } else { 
+        s.style.display = 'none'; 
+    } 
+}
 function showSpinner(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
 function setupModalControls() { const m = document.getElementById('messageModal'); document.getElementById('modalConfirm').onclick = () => m.classList.add('hidden'); document.getElementById('closeModal').onclick = () => m.classList.add('hidden'); }
 function showError(id, msg) { const e = document.getElementById(id); if (e) { e.querySelector('span').textContent = msg; e.style.display = 'block'; } }

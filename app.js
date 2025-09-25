@@ -518,4 +518,3 @@ function showModal(title, message, callback) {
     };
 }
 
-

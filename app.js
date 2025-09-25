@@ -397,8 +397,15 @@ function renderEvaluationContent(container, submitFn) {
 
 async function submitExam(e) {
     e.preventDefault();
-    showSpinner(true);
     const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    // --- FIX: Disable button immediately to prevent multiple submissions ---
+    submitButton.disabled = true;
+    submitButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Enviando...`;
+    
+    showSpinner(true);
+    
     const formData = new FormData(form);
     const userAnswers = { mc: {}, case: {} };
     let score = 0;
@@ -429,8 +436,6 @@ async function submitExam(e) {
     if (passed) {
         const certCode = response.certificate_code;
         showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${certCode}</strong><br>Podrás descargarlo en las próximas horas en el siguiente enlace: <a href="https://edunova.edu.pe/verify/" target="_blank">edunova.edu.pe/verify/</a>`);
-        await updateUserProgress('certificate_code', certCode);
-        await updateUserProgress('final_score', score);
     } else {
         const remaining = appData.configuracion.max_intentos_evaluacion - newIntentos;
         let message = `Tu puntaje es ${score}/${appData.evaluacion.preguntas.length}. Te quedan ${remaining} intentos.`;
@@ -441,7 +446,8 @@ async function submitExam(e) {
         showModal('Intento Registrado', message);
     }
 
-    form.querySelectorAll('input, textarea, button').forEach(el => el.disabled = true);
+    // Disable the form fields, but keep the submit button disabled to prevent re-submission of the same data
+    form.querySelectorAll('input, textarea').forEach(el => el.disabled = true);
     
     await updateUserProgress('eval_intentos', newIntentos);
     await updateUserProgress('eval_aprobado', progress.eval_aprobado || passed);

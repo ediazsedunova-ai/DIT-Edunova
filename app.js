@@ -521,33 +521,39 @@ function buildControlUnificado() {
 
 function initializeAllProgress() {
     controlUnificado.forEach(p => {
+        // Start with a clean, default progress state.
+        let progressData = createDefaultProgress(p.dni);
+
         const existingProgressRow = appData.progreso.find(prog => prog.dni?.toString() === p.dni?.toString());
-        let progressData;
 
-        if (existingProgressRow?.datos_progreso) {
-            try {
-                progressData = JSON.parse(existingProgressRow.datos_progreso);
-            } catch {
-                progressData = createDefaultProgress(p.dni);
+        if (existingProgressRow) {
+            // First, try to load the detailed state (comments, etc.) from the JSON blob.
+            if (existingProgressRow.datos_progreso) {
+                try {
+                    const savedProgress = JSON.parse(existingProgressRow.datos_progreso);
+                    // Merge the saved data into our default object.
+                    progressData = { ...progressData, ...savedProgress };
+                } catch (e) {
+                    console.warn(`Could not parse progress JSON for DNI ${p.dni}.`);
+                }
             }
-        } else {
-            progressData = createDefaultProgress(p.dni);
-        }
 
-        if (existingProgressRow?.codigo_certificado) {
-            progressData.certificate_code = existingProgressRow.codigo_certificado;
-        }
-        if (existingProgressRow?.nota_final) {
-            progressData.final_score = existingProgressRow.nota_final;
-        }
-        if (existingProgressRow?.estado_evaluacion === 'Aprobado') {
-            progressData.eval_aprobado = true;
-            progressData.step5_completed = true;
-        }
+            // CRITICAL: Now, override with the definitive status from individual columns.
+            // This ensures the main status is always correct, even if the JSON is outdated or corrupt.
+            if (existingProgressRow.estado_evaluacion === 'Aprobado') {
+                progressData.eval_aprobado = true;
+                progressData.step5_completed = true;
+            }
 
+            if (existingProgressRow.codigo_certificado) {
+                progressData.certificate_code = existingProgressRow.codigo_certificado;
+            }
+        }
+        
         participantProgress[p.dni] = progressData;
     });
 }
+
 
 function createDefaultProgress(dni) {
     const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dni);

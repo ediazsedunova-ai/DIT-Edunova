@@ -2,7 +2,7 @@
 // CONFIGURACIÓN PRINCIPAL - ¡IMPORTANTE!
 // -----------------------------------------------------------------------------
 // Pega la URL de tu Google Apps Script implementado aquí.
-const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbwuuJERNMU7ZrCrftQIzxn_dlIe4lzXh-SiseYAQzlwCWf6m9OUZ4fxlxe3Ubx0jGW7Hw/exec';
+const googleAppScriptUrl = 'PEGAR_AQUÍ_LA_URL_DE_TU_GOOGLE_APPS_SCRIPT';
 // -----------------------------------------------------------------------------
 
 // Global application state
@@ -118,7 +118,6 @@ async function handleRegistro(e) {
     const response = await postDataToGoogleSheet('registerUser', formData);
     
     if (response.status === 'success') {
-        // Add new user to local data to avoid full reload
         const newUser = { ...formData, nombre_completo: `${formData.nombres} ${formData.apellidos}` };
         appData.nuevos_registros.push(newUser);
         controlUnificado.push(newUser);
@@ -293,12 +292,12 @@ function renderModuleContent(container, moduleIndex) {
     `;
     document.getElementById(`completeModuleBtn_${moduleIndex}`).onclick = async () => {
         let allValid = true;
+        if (!progress.comments) progress.comments = {};
         module.temas.forEach(tema => {
             const comment = document.getElementById(`comment_${tema.id}`).value;
             if (comment.trim().length < 50) {
                 allValid = false;
             }
-            if (!progress.comments) progress.comments = {};
             progress.comments[tema.id] = comment;
         });
         if (allValid) {
@@ -332,6 +331,7 @@ function renderEvaluationContent(container, submitFn) {
     const progress = participantProgress[currentUser.dni];
     const remaining = appData.configuracion.max_intentos_evaluacion - (progress.eval_intentos || 0);
     const caseAnswers = progress.last_case_answers || {};
+    const caseStudy = appData.evaluacion.caso_practico;
 
     if (remaining <= 0 && !progress.eval_aprobado) {
         container.innerHTML = `<div class="error-message">Has agotado tus intentos.</div>`;
@@ -342,6 +342,7 @@ function renderEvaluationContent(container, submitFn) {
         <div class="exam-info"><strong>Intentos restantes:</strong> ${remaining}</div>
         <div id="examContainer">
             <form id="examForm">
+                <h5>Preguntas de Opción Múltiple</h5>
                 ${appData.evaluacion.preguntas.map((q, i) => `
                 <div class="question-item" id="q-item-${i}">
                     <p class="question-text">${i + 1}. ${q.texto}</p>
@@ -349,12 +350,19 @@ function renderEvaluationContent(container, submitFn) {
                         <label class="option-item" id="q${i}-opt${j}"><input type="radio" name="q${i}" value="${j}" required><span>${opt}</span></label>
                     `).join('')}</div>
                 </div>`).join('')}
-                <h5>Caso Práctico</h5>
-                ${appData.evaluacion.caso_practico.preguntas.map((cp, i) => `
-                <div class="form-group">
-                    <label class="form-label">${cp}</label>
-                    <textarea name="cp${i}" class="form-control" rows="3" required minlength="50">${caseAnswers[`cp${i}`] || ''}</textarea>
-                </div>`).join('')}
+                
+                <div class="case-study-section">
+                    <h5>Caso Práctico: ${caseStudy.titulo}</h5>
+                    <div class="case-description">
+                        <p><strong>Situación:</strong> ${caseStudy.descripcion}</p>
+                    </div>
+                    ${caseStudy.preguntas.map((cp, i) => `
+                    <div class="form-group">
+                        <label class="form-label"><strong>${i + 1}.</strong> ${cp}</label>
+                        <textarea name="cp${i}" class="form-control" rows="3" required minlength="50">${caseAnswers[`cp${i}`] || ''}</textarea>
+                    </div>`).join('')}
+                </div>
+
                 <div class="form-actions"><button type="submit" class="btn btn--primary">Enviar Evaluación</button></div>
             </form>
         </div>
@@ -388,7 +396,12 @@ async function submitExam(e) {
     const newIntentos = (progress.eval_intentos || 0) + 1;
     const passed = score >= appData.configuracion.nota_minima_aprobacion;
     
-    const attemptData = { dni: currentUser.dni, timestamp: new Date().toISOString(), score, answers_json: JSON.stringify(userAnswers) };
+    const attemptData = { 
+        dni: currentUser.dni, 
+        timestamp: new Date().toISOString(), 
+        score, 
+        answers_json: JSON.stringify(userAnswers) 
+    };
     const response = await postDataToGoogleSheet('saveExamAttempt', attemptData);
     
     showSpinner(false);
@@ -434,6 +447,9 @@ async function postDataToGoogleSheet(action, data) {
 }
 async function updateUserProgress(key, value) {
     if (!currentUser) return;
+    if (!participantProgress[currentUser.dni]) {
+        participantProgress[currentUser.dni] = createDefaultProgress(currentUser.dni);
+    }
     participantProgress[currentUser.dni][key] = value;
     await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: participantProgress[currentUser.dni] });
     updateCertificationSteps();
@@ -501,5 +517,4 @@ function showModal(title, message, callback) {
         if (callback) callback();
     };
 }
-
 

@@ -2,7 +2,7 @@
 // CONFIGURACIÓN PRINCIPAL - ¡IMPORTANTE!
 // -----------------------------------------------------------------------------
 // Pega la URL de tu Google Apps Script implementado aquí.
-const googleAppScriptUrl = 'PEGAR_AQUÍ_LA_URL_DE_TU_GOOGLE_APPS_SCRIPT';
+const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbwuuJERNMU7ZrCrftQIzxn_dlIe4lzXh-SiseYAQzlwCWf6m9OUZ4fxlxe3Ubx0jGW7Hw/exec';
 // -----------------------------------------------------------------------------
 
 // Global application state
@@ -547,4 +547,5 @@ function showModal(title, message, callback) {
         if (callback) callback();
     };
 }
+
 

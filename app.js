@@ -282,7 +282,11 @@ function renderModuleContent(container, moduleIndex) {
                 <p>${tema.resumen}</p>
                 <a href="${tema.lectura_url}" target="_blank" class="btn btn--secondary btn--sm">Leer artículo completo</a>
                 <div class="comment-form form-group">
-                    <textarea class="form-control" id="comment_${tema.id}" placeholder="Escriba su reflexión aquí (mínimo 50 caracteres)...">${progress.comments?.[tema.id] || ''}</textarea>
+                    <textarea class="form-control" id="comment_${tema.id}" 
+                              placeholder="Escriba su reflexión aquí (mínimo 50 caracteres)..." 
+                              maxlength="2000" 
+                              oninput="updateCharCounter('comment_${tema.id}', 'counter_${tema.id}')">${progress.comments?.[tema.id] || ''}</textarea>
+                    <div id="counter_${tema.id}" class="char-counter"></div>
                 </div>
             </div>
         `).join('')}
@@ -290,6 +294,10 @@ function renderModuleContent(container, moduleIndex) {
             <button id="completeModuleBtn_${moduleIndex}" class="btn btn--primary">Guardar y Completar Módulo</button>
         </div>
     `;
+    
+    // Initialize counters
+    module.temas.forEach(tema => updateCharCounter(`comment_${tema.id}`, `counter_${tema.id}`));
+
     document.getElementById(`completeModuleBtn_${moduleIndex}`).onclick = async () => {
         let allValid = true;
         if (!progress.comments) progress.comments = {};
@@ -329,12 +337,19 @@ async function validateSession2(e) {
 
 function renderEvaluationContent(container, submitFn) {
     const progress = participantProgress[currentUser.dni];
+    
+    // Final check: if user has already approved, show completion message and block form.
+    if (progress.eval_aprobado) {
+        container.innerHTML = `<div class="success-message">Ya has completado y aprobado esta evaluación.</div>`;
+        return;
+    }
+
     const remaining = appData.configuracion.max_intentos_evaluacion - (progress.eval_intentos || 0);
     const caseAnswers = progress.last_case_answers || {};
     const caseStudy = appData.evaluacion.caso_practico;
 
-    if (remaining <= 0 && !progress.eval_aprobado) {
-        container.innerHTML = `<div class="error-message">Has agotado tus intentos.</div>`;
+    if (remaining <= 0) {
+        container.innerHTML = `<div class="error-message">Has agotado todos tus intentos para la evaluación.</div>`;
         return;
     }
 
@@ -359,7 +374,8 @@ function renderEvaluationContent(container, submitFn) {
                     ${caseStudy.preguntas.map((cp, i) => `
                     <div class="form-group">
                         <label class="form-label"><strong>${i + 1}.</strong> ${cp}</label>
-                        <textarea name="cp${i}" class="form-control" rows="3" required minlength="50">${caseAnswers[`cp${i}`] || ''}</textarea>
+                        <textarea name="cp${i}" id="cp${i}" class="form-control" rows="3" required minlength="50" maxlength="2000" oninput="updateCharCounter('cp${i}', 'counter_cp${i}')">${caseAnswers[`cp${i}`] || ''}</textarea>
+                        <div id="counter_cp${i}" class="char-counter"></div>
                     </div>`).join('')}
                 </div>
 
@@ -369,6 +385,10 @@ function renderEvaluationContent(container, submitFn) {
         <div id="examResultActions" class="form-actions" style="display:none; justify-content: center; margin-top: 20px;">
             <button id="retryExamBtn" class="btn btn--primary">Reintentar Evaluación</button>
         </div>`;
+
+    // Initialize counters for case study
+    caseStudy.preguntas.forEach((_, i) => updateCharCounter(`cp${i}`, `counter_cp${i}`));
+    
     document.getElementById('examForm').addEventListener('submit', submitFn);
     document.getElementById('retryExamBtn').addEventListener('click', () => {
          renderEvaluationContent(document.getElementById('step5Content'), submitExam);
@@ -500,6 +520,16 @@ function createDefaultProgress(dni) {
     };
 }
 
+function updateCharCounter(textAreaId, counterId) {
+    const textArea = document.getElementById(textAreaId);
+    const counter = document.getElementById(counterId);
+    if (textArea && counter) {
+        const maxLength = textArea.maxLength;
+        const currentLength = textArea.value.length;
+        counter.textContent = `${currentLength} / ${maxLength} caracteres`;
+    }
+}
+
 function isStepCompleted(step) { return participantProgress[currentUser.dni]?.[`${step}_completed`]; }
 function handleLogout() { currentUser = null; showSection('loginSection'); }
 function updateStudentInfo() { document.getElementById('studentName').textContent = currentUser.nombre_completo; document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`; }
@@ -517,5 +547,4 @@ function showModal(title, message, callback) {
         if (callback) callback();
     };
 }
-
 

@@ -2,7 +2,7 @@
 // CONFIGURACIÓN PRINCIPAL - ¡IMPORTANTE!
 // -----------------------------------------------------------------------------
 // Pega la URL de tu Google Apps Script implementado aquí.
-const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbwuuJERNMU7ZrCrftQIzxn_dlIe4lzXh-SiseYAQzlwCWf6m9OUZ4fxlxe3Ubx0jGW7Hw/exec';
+const googleAppScriptUrl = 'PEGAR_AQUÍ_LA_URL_DE_TU_GOOGLE_APPS_SCRIPT';
 // -----------------------------------------------------------------------------
 
 // Global application state
@@ -67,9 +67,75 @@ function showSection(sectionName) {
 }
 
 // --- LOGIN, REGISTRATION & ADMIN ACCESS ---
-function handleLogin(e) { e.preventDefault(); /* ... */ }
-function showRegistroForm(dni) { /* ... */ }
-async function handleRegistro(e) { e.preventDefault(); /* ... */ }
+function handleLogin(e) { 
+    e.preventDefault(); 
+    const dni = document.getElementById('dniInput').value.trim();
+    if (!/^\d{8}$/.test(dni)) {
+        showError('loginError', 'DNI inválido. Debe contener 8 dígitos.');
+        return;
+    }
+    const participant = controlUnificado.find(u => u.dni && u.dni.toString() === dni);
+    if (participant) {
+        currentUser = participant;
+        updateCertificationSteps();
+        showSection('certificationSteps');
+        document.getElementById('loginError').style.display = 'none';
+    } else {
+        showRegistroForm(dni);
+    }
+}
+
+function showRegistroForm(dni) {
+    document.getElementById('regDni').value = dni;
+    const optionsContainer = document.getElementById('certificateOptionsContainer');
+    optionsContainer.innerHTML = appData.configuracion.opciones_certificado.map(opt => `
+        <label class="option-card">
+            <input type="radio" name="tipoCertificado" value="${opt.id}" ${opt.id === 'digital' ? 'checked' : ''}>
+            <div class="option-content">
+                <h5>${opt.nombre}</h5>
+                <p><strong>Costo:</strong> ${opt.costo}</p>
+                <p>${opt.desc}</p>
+            </div>
+        </label>
+    `).join('');
+    showSection('registroSection');
+}
+
+async function handleRegistro(e) {
+    e.preventDefault();
+    showSpinner(true);
+    const formData = {
+        dni: document.getElementById('regDni').value,
+        nombres: document.getElementById('regNombres').value,
+        apellidos: document.getElementById('regApellidos').value,
+        celular: document.getElementById('regCelular').value,
+        email: document.getElementById('regEmail').value,
+        residencia: document.getElementById('regResidencia').value,
+        certificado: document.querySelector('input[name="tipoCertificado"]:checked').value,
+        fecha_registro: new Date().toISOString().split('T')[0]
+    };
+
+    const response = await postDataToGoogleSheet('registerUser', formData);
+    
+    if (response.status === 'success') {
+        // Add new user to local data to avoid full reload
+        const newUser = { ...formData, nombre_completo: `${formData.nombres} ${formData.apellidos}` };
+        appData.nuevos_registros.push(newUser);
+        controlUnificado.push(newUser);
+        participantProgress[newUser.dni] = response.newProgress;
+        currentUser = newUser;
+        
+        showSpinner(false);
+        showModal('Registro Exitoso', `¡Bienvenido(a) ${formData.nombres}!<br>Tu registro ha sido completado.`, () => {
+             updateCertificationSteps();
+             showSection('certificationSteps');
+        });
+    } else {
+        showSpinner(false);
+        showModal('Error de Registro', response.message);
+    }
+}
+
 
 function requestAccess(type) {
     const passwordModal = document.getElementById('passwordModal');
@@ -148,13 +214,119 @@ function exportProgressToCsv() {
 }
 
 // --- CERTIFICATION STEPS & VALIDATION ---
-function updateCertificationSteps() { /* ... */ }
-function setupStep(stepId, isCompleted, renderFn, submitFn, isEnabled = true) { /* ... */ }
-function renderStep1Content(container, submitFn) { /* ... */ }
-async function validateSession1(e) { /* ... */ }
-function renderModuleContent(container, moduleIndex) { /* ... */ }
-function renderStep3Content(container, submitFn) { /* ... */ }
-async function validateSession2(e) { /* ... */ }
+function updateCertificationSteps() {
+    if (!currentUser) return;
+    updateStudentInfo();
+    setupStep('step1', isStepCompleted('step1'), renderStep1Content, validateSession1);
+    setupStep('step2', isStepCompleted('step2'), (c) => renderModuleContent(c, 0), null, isStepCompleted('step1'));
+    setupStep('step3', isStepCompleted('step3'), renderStep3Content, validateSession2, isStepCompleted('step2'));
+    setupStep('step4', isStepCompleted('step4'), (c) => renderModuleContent(c, 1), null, isStepCompleted('step3'));
+    setupStep('step5', isStepCompleted('step5'), renderEvaluationContent, submitExam, isStepCompleted('step4'));
+    updateCertificateSection();
+}
+
+function setupStep(stepId, isCompleted, renderFn, submitFn, isEnabled = true) {
+    const stepEl = document.getElementById(stepId);
+    if (!stepEl) return;
+    const h = stepEl.querySelector('.step-header');
+    const a = document.getElementById(`${stepId}Actions`);
+    const s = document.getElementById(`${stepId}Status`);
+    stepEl.className = 'step-item';
+    if (isCompleted) {
+        stepEl.classList.add('completed');
+        s.textContent = '✅ Completado';
+        a.style.display = 'none';
+        h.onclick = null;
+    } else if (isEnabled) {
+        stepEl.classList.add('active');
+        s.textContent = '🎯 Disponible';
+        h.onclick = () => {
+            const isVisible = a.style.display === 'block';
+            a.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible && renderFn) {
+                 renderFn(document.getElementById(`${stepId}Content`), submitFn);
+            }
+        };
+    } else {
+        stepEl.classList.add('disabled');
+        s.textContent = '🔒 Bloqueado';
+        a.style.display = 'none';
+        h.onclick = null;
+    }
+}
+
+function renderStep1Content(container, submitFn) {
+    container.innerHTML = `<p>Vea la grabación y escriba la palabra clave para validar.</p>
+    <a href="${appData.configuracion.enlaces_grabaciones.sesion1}" target="_blank" class="btn btn--secondary">Ver Video Sesión 1</a>
+    <form id="session1Form" class="form-group">
+        <input id="session1Code" class="form-control" placeholder="Palabra Clave Sesión 1" required style="margin-top:1rem;">
+        <div class="form-actions" style="justify-content: flex-start;"><button type="submit" class="btn btn--primary">Validar</button></div>
+    </form>`;
+    document.getElementById('session1Form').addEventListener('submit', submitFn);
+}
+async function validateSession1(e) {
+    e.preventDefault();
+    if (document.getElementById('session1Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion1.toUpperCase()) {
+        await updateUserProgress('step1_completed', true);
+    } else {
+        showModal('Error', 'Palabra clave incorrecta.');
+    }
+}
+
+function renderModuleContent(container, moduleIndex) {
+    const module = appData.modulos[moduleIndex];
+    const progress = participantProgress[currentUser.dni];
+    container.innerHTML = `
+        ${module.temas.map(tema => `
+            <div class="topic-item">
+                <h5>${tema.titulo}</h5>
+                <p>${tema.resumen}</p>
+                <a href="${tema.lectura_url}" target="_blank" class="btn btn--secondary btn--sm">Leer artículo completo</a>
+                <div class="comment-form form-group">
+                    <textarea class="form-control" id="comment_${tema.id}" placeholder="Escriba su reflexión aquí (mínimo 50 caracteres)...">${progress.comments?.[tema.id] || ''}</textarea>
+                </div>
+            </div>
+        `).join('')}
+        <div class="form-actions" style="justify-content: flex-start;">
+            <button id="completeModuleBtn_${moduleIndex}" class="btn btn--primary">Guardar y Completar Módulo</button>
+        </div>
+    `;
+    document.getElementById(`completeModuleBtn_${moduleIndex}`).onclick = async () => {
+        let allValid = true;
+        module.temas.forEach(tema => {
+            const comment = document.getElementById(`comment_${tema.id}`).value;
+            if (comment.trim().length < 50) {
+                allValid = false;
+            }
+            if (!progress.comments) progress.comments = {};
+            progress.comments[tema.id] = comment;
+        });
+        if (allValid) {
+            const stepKey = moduleIndex === 0 ? 'step2_completed' : 'step4_completed';
+            await updateUserProgress(stepKey, true);
+        } else {
+            showModal('Incompleto', 'Debe escribir una reflexión de al menos 50 caracteres para cada tema.');
+        }
+    };
+}
+
+function renderStep3Content(container, submitFn) {
+     container.innerHTML = `<p>Vea la grabación y escriba la palabra clave para validar.</p>
+    <a href="${appData.configuracion.enlaces_grabaciones.sesion2}" target="_blank" class="btn btn--secondary">Ver Video Sesión 2</a>
+    <form id="session2Form" class="form-group">
+        <input id="session2Code" class="form-control" placeholder="Palabra Clave Sesión 2" required style="margin-top:1rem;">
+        <div class="form-actions" style="justify-content: flex-start;"><button type="submit" class="btn btn--primary">Validar</button></div>
+    </form>`;
+    document.getElementById('session2Form').addEventListener('submit', submitFn);
+}
+async function validateSession2(e) {
+    e.preventDefault();
+    if (document.getElementById('session2Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion2.toUpperCase()) {
+        await updateUserProgress('step3_completed', true);
+    } else {
+        showModal('Error', 'Palabra clave incorrecta.');
+    }
+}
 
 function renderEvaluationContent(container, submitFn) {
     const progress = participantProgress[currentUser.dni];
@@ -181,7 +353,7 @@ function renderEvaluationContent(container, submitFn) {
                 ${appData.evaluacion.caso_practico.preguntas.map((cp, i) => `
                 <div class="form-group">
                     <label class="form-label">${cp}</label>
-                    <textarea name="cp${i}" class="form-control" rows="3" required minlength="50">${caseAnswers[i] || ''}</textarea>
+                    <textarea name="cp${i}" class="form-control" rows="3" required minlength="50">${caseAnswers[`cp${i}`] || ''}</textarea>
                 </div>`).join('')}
                 <div class="form-actions"><button type="submit" class="btn btn--primary">Enviar Evaluación</button></div>
             </form>
@@ -197,6 +369,7 @@ function renderEvaluationContent(container, submitFn) {
 
 async function submitExam(e) {
     e.preventDefault();
+    showSpinner(true);
     const form = e.target;
     const formData = new FormData(form);
     const userAnswers = { mc: {}, case: {} };
@@ -207,7 +380,7 @@ async function submitExam(e) {
         userAnswers.mc[i] = userAnswer;
         if (userAnswer === q.correcta) score++;
     });
-    appData.evaluacion.caso_practico.preguntas.forEach((cp, i) => userAnswers.case[i] = formData.get(`cp${i}`));
+    appData.evaluacion.caso_practico.preguntas.forEach((cp, i) => userAnswers.case[`cp${i}`] = formData.get(`cp${i}`));
 
     showExamResults(userAnswers.mc);
 
@@ -215,38 +388,102 @@ async function submitExam(e) {
     const newIntentos = (progress.eval_intentos || 0) + 1;
     const passed = score >= appData.configuracion.nota_minima_aprobacion;
     
-    let certCode = null;
+    const attemptData = { dni: currentUser.dni, timestamp: new Date().toISOString(), score, answers_json: JSON.stringify(userAnswers) };
+    const response = await postDataToGoogleSheet('saveExamAttempt', attemptData);
+    
+    showSpinner(false);
+
     if (passed) {
-        certCode = parseInt(appData.configuracion.correlativo_certificado_base) + parseInt(currentUser.dni.slice(-4));
-        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${certCode}</strong>`);
+        const certCode = response.certificate_code;
+        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${certCode}</strong><br>Podrás descargarlo en las próximas horas en el siguiente enlace: <a href="https://edunova.edu.pe/verify/" target="_blank">edunova.edu.pe/verify/</a>`);
+        await updateUserProgress('certificate_code', certCode);
+        await updateUserProgress('final_score', score);
     } else {
         const remaining = appData.configuracion.max_intentos_evaluacion - newIntentos;
-        showModal('Intento Registrado', `Tu puntaje es ${score}/${appData.evaluacion.preguntas.length}. Te quedan ${remaining} intentos.`);
+        let message = `Tu puntaje es ${score}/${appData.evaluacion.preguntas.length}. Te quedan ${remaining} intentos.`;
         if (remaining > 0) {
+            message += "<br><br><b>Haz clic en el botón 'Reintentar Evaluación' para hacerlo una vez más.</b>";
             document.getElementById('examResultActions').style.display = 'flex';
         }
+        showModal('Intento Registrado', message);
     }
 
     form.querySelectorAll('input, textarea, button').forEach(el => el.disabled = true);
     
-    await postDataToGoogleSheet('saveExamAttempt', { dni: currentUser.dni, timestamp: new Date().toISOString(), score, answers_json: JSON.stringify(userAnswers) });
     await updateUserProgress('eval_intentos', newIntentos);
     await updateUserProgress('eval_aprobado', progress.eval_aprobado || passed);
     await updateUserProgress('step5_completed', progress.step5_completed || passed);
     await updateUserProgress('last_case_answers', userAnswers.case);
-    if (passed) {
-        await updateUserProgress('final_score', score);
-        await updateUserProgress('certificate_code', certCode);
-    }
 }
 
 // --- DATA & UTILITIES ---
-async function postDataToGoogleSheet(action, data) { /* ... */ }
-async function updateUserProgress(key, value) { /* ... */ }
-function showExamResults(userAnswers) { /* ... */ }
-function buildControlUnificado() { /* ... */ }
-function initializeAllProgress() { /* ... */ }
-function createDefaultProgress(dni) { /* ... */ }
+async function postDataToGoogleSheet(action, data) {
+    try {
+        const response = await fetch(googleAppScriptUrl, {
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'omit',
+            body: JSON.stringify({ action, data })
+        });
+        if (!response.ok) throw new Error('Network response was not ok.');
+        return await response.json();
+    } catch (error) {
+        console.error('Error posting data:', error);
+        return { status: 'error', message: error.message };
+    }
+}
+async function updateUserProgress(key, value) {
+    if (!currentUser) return;
+    participantProgress[currentUser.dni][key] = value;
+    await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: participantProgress[currentUser.dni] });
+    updateCertificationSteps();
+}
+function showExamResults(userAnswers) {
+    appData.evaluacion.preguntas.forEach((q, i) => {
+        const correctAnswer = q.correcta;
+        document.querySelectorAll(`input[name="q${i}"]`).forEach((radio, j) => {
+            const label = radio.parentElement;
+            label.classList.remove('correct', 'incorrect', 'correct-answer');
+            if (j === correctAnswer) {
+                label.classList.add('correct-answer');
+            }
+            if (j === userAnswers[i]) {
+                label.classList.add(userAnswers[i] === correctAnswer ? 'correct' : 'incorrect');
+            }
+        });
+    });
+}
+function buildControlUnificado() {
+    const map = new Map();
+    [...appData.matriculados, ...appData.nuevos_registros].forEach(p => {
+        if (p.dni) {
+            map.set(p.dni.toString(), { ...p, dni: p.dni.toString(), nombre_completo: `${p.nombres} ${p.apellidos}`.trim() });
+        }
+    });
+    controlUnificado = Array.from(map.values());
+}
+function initializeAllProgress() {
+    controlUnificado.forEach(p => {
+        const existingProgress = appData.progreso.find(prog => prog.dni?.toString() === p.dni);
+        if (existingProgress?.datos_progreso) {
+            try { participantProgress[p.dni] = JSON.parse(existingProgress.datos_progreso); } catch { participantProgress[p.dni] = createDefaultProgress(p.dni); }
+        } else {
+            participantProgress[p.dni] = createDefaultProgress(p.dni);
+        }
+    });
+}
+function createDefaultProgress(dni) {
+    const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dni);
+    const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dni);
+    return {
+        step1_completed: isAsistenteS1, step2_completed: false,
+        step3_completed: isAsistenteS2, step4_completed: false,
+        step5_completed: false, eval_intentos: 0,
+        eval_aprobado: false, comments: {}, final_score: null,
+        certificate_code: null, last_case_answers: {}
+    };
+}
+
 function isStepCompleted(step) { return participantProgress[currentUser.dni]?.[`${step}_completed`]; }
 function handleLogout() { currentUser = null; showSection('loginSection'); }
 function updateStudentInfo() { document.getElementById('studentName').textContent = currentUser.nombre_completo; document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`; }
@@ -254,23 +491,14 @@ function updateCertificateSection() { const s = document.getElementById('certifi
 function showSpinner(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
 function setupModalControls() { const m = document.getElementById('messageModal'); document.getElementById('modalConfirm').onclick = () => m.classList.add('hidden'); document.getElementById('closeModal').onclick = () => m.classList.add('hidden'); }
 function showError(id, msg) { const e = document.getElementById(id); if (e) { e.querySelector('span').textContent = msg; e.style.display = 'block'; } }
-function showModal(title, message) { document.getElementById('modalTitle').textContent = title; document.getElementById('modalMessage').innerHTML = message; document.getElementById('messageModal').classList.remove('hidden'); }
-
-// Stubs for brevity
-handleLogin = (e) => { e.preventDefault(); const dni = document.getElementById('dniInput').value.trim(); if (!/^\d{8}$/.test(dni)) return; const p = controlUnificado.find(u => u.dni.toString() === dni); if (p) { currentUser = p; updateCertificationSteps(); showSection('certificationSteps'); } else { showRegistroForm(dni); } };
-showRegistroForm = (dni) => { document.getElementById('regDni').value = dni; /* ... */ showSection('registroSection'); };
-handleRegistro = async (e) => { e.preventDefault(); /* ... */ };
-updateCertificationSteps = () => { if (!currentUser) return; updateStudentInfo(); ['step1','step2','step3','step4','step5'].forEach((s, i) => setupStep(s, isStepCompleted(s), (c, f) => i === 0 ? renderStep1Content(c, f) : (i === 2 ? renderStep3Content(c, f) : (i === 4 ? renderEvaluationContent(c, f) : renderModuleContent(c, i === 1 ? 0 : 1))), i === 0 ? validateSession1 : (i === 2 ? validateSession2 : (i === 4 ? submitExam : null)), i > 0 ? isStepCompleted(`step${i}`) : true)); updateCertificateSection(); };
-setupStep = (id, comp, ren, sub, en) => { const el = document.getElementById(id); const h = el.querySelector('.step-header'); const a = document.getElementById(`${id}Actions`); const s = document.getElementById(`${id}Status`); el.className = 'step-item'; if (comp) { el.classList.add('completed'); s.textContent = '✅ Completado'; a.style.display = 'none'; h.onclick = null; } else if (en) { el.classList.add('active'); s.textContent = '🎯 Disponible'; h.onclick = () => { const v = a.style.display === 'block'; a.style.display = v ? 'none' : 'block'; if (!v && ren) ren(document.getElementById(`${id}Content`), sub); }; } else { el.classList.add('disabled'); s.textContent = '🔒 Bloqueado'; a.style.display = 'none'; h.onclick = null; } };
-renderStep1Content = (c, s) => { c.innerHTML = '<form id="session1Form"><input id="session1Code" class="form-control" placeholder="Clave Sesión 1" required><button type="submit">Validar</button></form>'; document.getElementById('session1Form').addEventListener('submit', s); };
-validateSession1 = async (e) => { e.preventDefault(); if (document.getElementById('session1Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion1.toUpperCase()) await updateUserProgress('step1_completed', true); };
-renderModuleContent = (c, m) => { c.innerHTML = `<div>Módulo ${m+1} Contenido</div><button id="modBtn${m}">Completar</button>`; document.getElementById(`modBtn${m}`).onclick = async () => await updateUserProgress(`step${m===0?2:4}_completed`, true);};
-renderStep3Content = (c, s) => { c.innerHTML = '<form id="session2Form"><input id="session2Code" class="form-control" placeholder="Clave Sesión 2" required><button type="submit">Validar</button></form>'; document.getElementById('session2Form').addEventListener('submit', s); };
-validateSession2 = async (e) => { e.preventDefault(); if (document.getElementById('session2Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion2.toUpperCase()) await updateUserProgress('step3_completed', true); };
-showExamResults = (ua) => { appData.evaluacion.preguntas.forEach((q, i) => { const ca = q.correcta; document.querySelectorAll(`input[name="q${i}"]`).forEach((r, j) => { const l = r.parentElement; l.className = 'option-item'; if (j === ca) l.classList.add('correct-answer'); if (j === ua[i]) l.classList.add(ua[i] === ca ? 'correct' : 'incorrect'); }); }); };
-postDataToGoogleSheet = async (a, d) => { /* Mock for brevity */ console.log('Posting:', a, d); return { status: 'success' }; };
-updateUserProgress = async (k, v) => { if (!currentUser) return; participantProgress[currentUser.dni][k] = v; await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: participantProgress[currentUser.dni] }); updateCertificationSteps(); };
-buildControlUnificado = () => { const map = new Map(); [...appData.matriculados, ...appData.nuevos_registros].forEach(p => { if (p.dni) map.set(p.dni.toString(), { ...p, dni: p.dni.toString(), nombre_completo: `${p.nombres} ${p.apellidos}` }); }); controlUnificado = Array.from(map.values()); };
-initializeAllProgress = () => { controlUnificado.forEach(p => { const e = appData.progreso.find(prog => prog.dni?.toString() === p.dni); if (e?.datos_progreso) try { participantProgress[p.dni] = JSON.parse(e.datos_progreso); } catch { participantProgress[p.dni] = createDefaultProgress(p.dni); } else { participantProgress[p.dni] = createDefaultProgress(p.dni); } }); };
-createDefaultProgress = (d) => ({ step1_completed: appData.asistentes_sesion1.some(a => a.dni?.toString() === d), step2_completed: false, step3_completed: app.asistentes_sesion2.some(a => a.dni?.toString() === d), step4_completed: false, step5_completed: false, eval_intentos: 0, eval_aprobado: false, comments: {}, final_score: null, certificate_code: null, last_case_answers: {} });
+function showModal(title, message, callback) {
+    const modal = document.getElementById('messageModal');
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMessage').innerHTML = message;
+    modal.classList.remove('hidden');
+    document.getElementById('modalConfirm').onclick = () => {
+        modal.classList.add('hidden');
+        if (callback) callback();
+    };
+}
 

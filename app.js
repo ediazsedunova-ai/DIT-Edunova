@@ -121,7 +121,7 @@ async function handleRegistro(e) {
     const response = await postDataToGoogleSheet('registerUser', formData);
     
     if (response.status === 'success') {
-        const newUser = { ...formData, nombre_completo: `${formData.nombres} ${formData.apellidos}` };
+        const newUser = { ...formData, nombre_completo: `${formData.nombres} ${formData.apellidos}`, dni: formData.dni.toString() };
         appData.nuevos_registros.push(newUser);
         controlUnificado.push(newUser);
         participantProgress[newUser.dni] = response.newProgress;
@@ -567,8 +567,10 @@ function initializeAllProgress() {
 
 
 function createDefaultProgress(dni) {
-    const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dni);
-    const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dni);
+    // Ensure DNI is a string
+    const dniStr = dni.toString();
+    const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dniStr);
+    const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dniStr);
     return {
         step1_completed: isAsistenteS1, step2_completed: false,
         step3_completed: isAsistenteS2, step4_completed: false,
@@ -577,6 +579,7 @@ function createDefaultProgress(dni) {
         certificate_code: null, last_case_answers: {}
     };
 }
+
 
 function updateCharCounter(textAreaId, counterId) {
     const textArea = document.getElementById(textAreaId);

@@ -103,7 +103,9 @@ function showRegistroForm(dni) {
 
 async function handleRegistro(e) {
     e.preventDefault();
-    showSpinner(true);
+    const registerButton = e.target.querySelector('button[type="submit"]');
+    setButtonLoading(registerButton, true, 'Registrando...');
+
     const formData = {
         dni: document.getElementById('regDni').value,
         nombres: document.getElementById('regNombres').value,
@@ -124,13 +126,13 @@ async function handleRegistro(e) {
         participantProgress[newUser.dni] = response.newProgress;
         currentUser = newUser;
         
-        showSpinner(false);
+        setButtonLoading(registerButton, false, 'Completar Registro');
         showModal('Registro Exitoso', `¡Bienvenido(a) ${formData.nombres}!<br>Tu registro ha sido completado.`, () => {
              updateCertificationSteps();
              showSection('certificationSteps');
         });
     } else {
-        showSpinner(false);
+        setButtonLoading(registerButton, false, 'Completar Registro');
         showModal('Error de Registro', response.message);
     }
 }
@@ -475,6 +477,8 @@ async function submitExam(e) {
         if (remaining > 0) {
             message += "<br><br><b>Haz clic en el botón 'Reintentar Evaluación' para hacerlo una vez más.</b>";
             document.getElementById('examResultActions').style.display = 'flex';
+        } else {
+            message += "<br><br><b>Has agotado todos tus intentos.</b>";
         }
         showModal('Intento Registrado', message);
     }
@@ -514,16 +518,37 @@ function buildControlUnificado() {
     });
     controlUnificado = Array.from(map.values());
 }
+
 function initializeAllProgress() {
     controlUnificado.forEach(p => {
-        const existingProgress = appData.progreso.find(prog => prog.dni?.toString() === p.dni);
-        if (existingProgress?.datos_progreso) {
-            try { participantProgress[p.dni] = JSON.parse(existingProgress.datos_progreso); } catch { participantProgress[p.dni] = createDefaultProgress(p.dni); }
+        const existingProgressRow = appData.progreso.find(prog => prog.dni?.toString() === p.dni?.toString());
+        let progressData;
+
+        if (existingProgressRow?.datos_progreso) {
+            try {
+                progressData = JSON.parse(existingProgressRow.datos_progreso);
+            } catch {
+                progressData = createDefaultProgress(p.dni);
+            }
         } else {
-            participantProgress[p.dni] = createDefaultProgress(p.dni);
+            progressData = createDefaultProgress(p.dni);
         }
+
+        if (existingProgressRow?.codigo_certificado) {
+            progressData.certificate_code = existingProgressRow.codigo_certificado;
+        }
+        if (existingProgressRow?.nota_final) {
+            progressData.final_score = existingProgressRow.nota_final;
+        }
+        if (existingProgressRow?.estado_evaluacion === 'Aprobado') {
+            progressData.eval_aprobado = true;
+            progressData.step5_completed = true;
+        }
+
+        participantProgress[p.dni] = progressData;
     });
 }
+
 function createDefaultProgress(dni) {
     const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dni);
     const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dni);
@@ -545,7 +570,7 @@ function updateCharCounter(textAreaId, counterId) {
         counter.textContent = `${currentLength} / ${maxLength} caracteres`;
     }
 }
-function setButtonLoading(button, isLoading, loadingText = 'Cargando...') {
+function setButtonLoading(button, isLoading, loadingText = 'Cargando...', defaultText) {
     if (!button) return;
     if (isLoading) {
         if (!button.originalHTML) {
@@ -554,9 +579,7 @@ function setButtonLoading(button, isLoading, loadingText = 'Cargando...') {
         button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
         button.disabled = true;
     } else {
-        if (button.originalHTML) {
-            button.innerHTML = button.originalHTML;
-        }
+        button.innerHTML = defaultText || button.originalHTML || 'Acción';
         button.disabled = false;
     }
 }
@@ -566,7 +589,7 @@ function updateStudentInfo() { document.getElementById('studentName').textConten
 function updateCertificateSection() { 
     const s = document.getElementById('certificateSection'); 
     const p = participantProgress[currentUser.dni]; 
-    if (p?.certificate_code) { 
+    if (p && p.certificate_code) { 
         document.getElementById('certificateCode').textContent = p.certificate_code; 
         s.style.display = 'block'; 
     } else { 

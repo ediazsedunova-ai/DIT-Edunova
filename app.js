@@ -1,466 +1,313 @@
 // -----------------------------------------------------------------------------
 // CONFIGURACIÓN PRINCIPAL - ¡IMPORTANTE!
 // -----------------------------------------------------------------------------
-const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbwuuJERNMU7ZrCrftQIzxn_dlIe4lzXh-SiseYAQzlwCWf6m9OUZ4fxlxe3Ubx0jGW7Hw/exec';
+// Pega el ID de tu hoja de cálculo aquí. El ID es la parte larga de la URL.
+// Ejemplo URL: https://docs.google.com/spreadsheets/d/AQUI_VA_EL_ID/edit
+const SPREADSHEET_ID = '12vjbDhpd5qhIsG--VDYM8wZ5vvIBzq-4IYQBIg2K9lc';
 // -----------------------------------------------------------------------------
 
-// Global application state
-let appData = {};
-let currentUser = null;
-let participantProgress = {};
-let controlUnificado = [];
 
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Initializing DIT System...');
-    showSpinner(true);
-    await loadDataFromGoogleSheet();
-    showSpinner(false);
-
-    if (googleAppScriptUrl.includes('PEGAR_AQUÍ')) {
-        showModal('Error de Configuración', 'La aplicación no está conectada. Por favor, edita el archivo `app.js` y añade la URL de tu Google Apps Script.');
-        return;
-    }
-
-    setupEventListeners();
-    showSection('loginSection');
-});
-
-async function loadDataFromGoogleSheet() {
-    try {
-        const response = await fetch(googleAppScriptUrl);
-        if (!response.ok) throw new Error(`Error de red: ${response.status}.`);
-        const data = await response.json();
-        if (data.status === 'error') throw new Error(data.message);
-        appData = data;
-        console.log('✅ Data loaded successfully:', appData);
-        
-        // CORREGIDO: Lógica para el botón de WhatsApp
-        const whatsappBtn = document.getElementById('whatsappGroupBtn');
-        if (appData.config.whatsapp_link && whatsappBtn) {
-            whatsappBtn.href = appData.config.whatsapp_link;
-            whatsappBtn.style.display = 'inline-flex';
-        }
-    } catch (error) {
-        console.error('❌ Failed to load data:', error);
-        showModal('Error de Carga', `No se pudo conectar con la base de datos. Por favor, intenta de nuevo más tarde. Detalle: ${error.message}`);
-    }
+// --- Función Principal de Respuesta a Peticiones GET ---
+// Se ejecuta cuando la página web carga los datos iniciales.
+function doGet(e) {
+  try {
+    const data = getInitialData();
+    return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    Logger.log(`Error en doGet: ${error.stack}`);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
-function setupEventListeners() {
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
-    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-    document.getElementById('adminBtn').addEventListener('click', () => showPasswordModal('admin'));
-    document.getElementById('adminLogoutBtn').addEventListener('click', handleLogout);
+// --- Función Principal de Respuesta a Peticiones POST ---
+// Se ejecuta cuando la página web envía datos (registros, progreso, etc.).
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000); // Esperar hasta 30 segundos por el bloqueo para evitar concurrencia.
+
+  try {
+    const request = JSON.parse(e.postData.contents);
+    let response;
+
+    switch (request.action) {
+      case 'registerUser':
+        response = registerUser(request.data);
+        break;
+      case 'updateProgress':
+        response = updateProgress(request.data);
+        break;
+      case 'saveExamAttempt':
+        response = saveExamAttempt(request.data);
+        break;
+      default:
+        response = { status: 'error', message: 'Acción no reconocida' };
+    }
     
-    document.querySelectorAll('.tab-link').forEach(button => {
-        button.addEventListener('click', () => {
-            const tabId = button.dataset.tab;
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            button.classList.add('active');
-        });
-    });
-
-    document.getElementById('adminSearchDNI').addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        filterAdminTable(searchTerm);
-    });
-
-    setupModalControls();
-    setupPasswordModalControls();
+    return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    Logger.log(`Error en doPost: ${error.stack}`);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock(); // Liberar el bloqueo siempre.
+  }
 }
 
-function showSection(sectionId) {
-    document.querySelectorAll('.section').forEach(section => {
-        section.style.display = 'none';
-    });
-    const sectionToShow = document.getElementById(sectionId);
-    if(sectionToShow) {
-        sectionToShow.style.display = 'block';
+// --- Lógica de Obtención de Datos (GET) ---
+
+function getInitialData() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  
+  const getSheetData = (sheetName, parser) => {
+    try {
+      const sheet = ss.getSheetByName(sheetName);
+      if (!sheet) throw new Error(`La pestaña "${sheetName}" no fue encontrada.`);
+      const jsonData = sheetToJSON(sheet);
+      if (!jsonData) throw new Error(`No se pudo convertir la pestaña "${sheetName}" a JSON.`);
+      
+      if (parser) {
+        return parser(jsonData);
+      }
+      return jsonData;
+    } catch (e) {
+      Logger.log(`Error procesando la pestaña: ${sheetName}. Detalles: ${e.message}`);
+      throw new Error(`Fallo al procesar la pestaña "${sheetName}": ${e.message}`);
     }
+  };
+
+  return {
+    matriculados: getSheetData('Matriculados'),
+    asistentes_sesion1: getSheetData('AsistentesS1'),
+    asistentes_sesion2: getSheetData('AsistentesS2'),
+    nuevos_registros: getSheetData('NuevosRegistros'),
+    progreso: getSheetData('Progreso'),
+    modulos: getSheetData('Modulos', parseModules),
+    evaluacion: getSheetData('Evaluacion', parseEvaluation),
+    configuracion: getSheetData('Configuracion', parseConfig)
+  };
 }
 
-function handleLogin(event) {
-    event.preventDefault();
-    const dni = document.getElementById('dniInput').value.trim();
-    const user = appData.matriculados.find(p => p.dni.toString() === dni);
+// --- Lógica de Modificación de Datos (POST) ---
 
-    if (user) {
-        currentUser = user;
-        participantProgress = appData.progreso.find(p => p.dni.toString() === dni) || { dni, datos_progreso: '{}', intentos: 0, nota_final: null, estado_evaluacion: 'Pendiente', codigo_certificado: null };
-        try {
-           participantProgress.datos_progreso = JSON.parse(participantProgress.datos_progreso || '{}');
-        } catch(e) {
-           participantProgress.datos_progreso = {};
+function registerUser(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('NuevosRegistros');
+  
+  const allUsers = [...sheetToJSON(ss.getSheetByName('Matriculados')), ...sheetToJSON(sheet)];
+  const userExists = allUsers.some(u => u.dni && u.dni.toString() === data.dni.toString());
+  
+  if (userExists) {
+    return { status: 'error', message: 'Este DNI ya ha sido registrado.' };
+  }
+  
+  // SOLUCIÓN DNI '0': Se antepone un apóstrofe para forzar el formato de texto en Sheets.
+  const dniAsText = `'${data.dni}`;
+  sheet.appendRow([dniAsText, data.nombres, data.apellidos, data.celular, data.email, data.residencia, data.certificado, data.fecha_registro]);
+  
+  const initialData = getInitialData();
+  const isAsistenteS1 = initialData.asistentes_sesion1.some(a => a.dni && a.dni.toString() === data.dni.toString());
+  const isAsistenteS2 = initialData.asistentes_sesion2.some(a => a.dni && a.dni.toString() === data.dni.toString());
+
+  const newProgress = {
+      step1_completed: isAsistenteS1, step2_completed: false, step3_completed: isAsistenteS2, step4_completed: false, step5_completed: false,
+      eval_intentos: 0, eval_aprobado: false, comments: {}, final_score: null, certificate_code: null, last_case_answers: {}
+  };
+  updateProgress({ dni: data.dni, progressData: newProgress });
+
+  return { status: 'success', message: 'Usuario registrado.', newProgress };
+}
+
+function updateProgress(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Progreso');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const dniColumnIndex = headers.indexOf('dni');
+  const progressColumnIndex = headers.indexOf('datos_progreso');
+  
+  if (dniColumnIndex === -1 || progressColumnIndex === -1) {
+    throw new Error('La hoja "Progreso" debe tener las columnas "dni" y "datos_progreso".');
+  }
+
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  let found = false;
+  
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][dniColumnIndex] && values[i][dniColumnIndex].toString() === data.dni.toString()) {
+      sheet.getRange(i + 1, progressColumnIndex + 1).setValue(JSON.stringify(data.progressData));
+      found = true;
+      break;
+    }
+  }
+  
+  if (!found) {
+    const newRow = new Array(headers.length).fill('');
+    // SOLUCIÓN DNI '0': Forzar formato de texto al crear la fila de progreso.
+    newRow[dniColumnIndex] = `'${data.dni}`;
+    newRow[progressColumnIndex] = JSON.stringify(data.progressData);
+    sheet.appendRow(newRow);
+  }
+  
+  return { status: 'success', message: 'Progreso actualizado.' };
+}
+
+function saveExamAttempt(data) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('EvaluacionRespuestas');
+  const config = parseConfig(sheetToJSON(ss.getSheetByName('Configuracion')));
+  
+  const isApproved = data.score >= config.nota_minima_aprobacion;
+  
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const dniColumnIndex = headers.indexOf('dni');
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  let rowIndex = -1;
+  
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][dniColumnIndex] && values[i][dniColumnIndex].toString() === data.dni.toString()) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  // SOLUCIÓN DNI '0': Forzar formato de texto.
+  const newRowData = [`'${data.dni}`, data.timestamp, data.score, isApproved, data.answers_json];
+  if (rowIndex !== -1) {
+    sheet.getRange(rowIndex, 1, 1, newRowData.length).setValues([newRowData]);
+  } else {
+    sheet.appendRow(newRowData);
+  }
+  
+  let certificateCode = null;
+  if (isApproved) {
+    certificateCode = generateCertificateCode(ss);
+    updateProgressField(ss, data.dni, 'codigo_certificado', certificateCode);
+    updateProgressField(ss, data.dni, 'nota_final', data.score);
+    updateProgressField(ss, data.dni, 'estado_evaluacion', 'Aprobado');
+  } else {
+    updateProgressField(ss, data.dni, 'estado_evaluacion', 'Reprobado');
+  }
+
+  return { status: 'success', message: 'Intento guardado.', certificate_code: certificateCode };
+}
+
+// --- Funciones de Ayuda y Parseo ---
+
+function sheetToJSON(sheet) {
+  if (!sheet) return null;
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 1) return [];
+  const headers = rows.shift().map(h => h ? h.toString().trim() : '');
+  return rows.map(row => {
+    let obj = {};
+    headers.forEach((header, i) => {
+      if (header) {
+        obj[header] = row[i] !== null && row[i] !== undefined ? row[i].toString() : '';
+      }
+    });
+    return obj;
+  });
+}
+
+function parseConfig(configData) {
+  if (!Array.isArray(configData)) throw new Error("Los datos de configuración no son válidos.");
+  const config = { credenciales: {}, palabras_clave: {}, enlaces_grabaciones: {}, opciones_certificado: [] };
+  const certDigital = {};
+  const certFisico = {};
+  configData.forEach(item => {
+    if (!item || typeof item.clave !== 'string') return;
+    const key = item.clave;
+    const value = item.valor;
+    if (key.startsWith('cert_digital_')) certDigital[key.replace('cert_digital_', '')] = value;
+    else if (key.startsWith('cert_fisico_')) certFisico[key.replace('cert_fisico_', '')] = value;
+    else if (key.includes('_password')) config.credenciales[key] = value;
+    else if (key.includes('_clave')) config.palabras_clave[key.replace('_clave', '')] = value;
+    else if (key.includes('_video')) config.enlaces_grabaciones[key.replace('_video', '')] = value;
+    else config[key] = isNaN(value) ? value : Number(value);
+  });
+  config.opciones_certificado.push(certDigital, certFisico);
+  return config;
+}
+
+function parseModules(moduleData) {
+    if (!Array.isArray(moduleData)) throw new Error("Los datos de módulos no son válidos.");
+    const modules = {};
+    moduleData.forEach(row => {
+        if (!row.id_modulo || !row.titulo_modulo) return;
+        if (!modules[row.id_modulo]) {
+            modules[row.id_modulo] = { id: row.id_modulo, titulo: row.titulo_modulo, temas: [] };
         }
-        document.getElementById('loginError').style.display = 'none';
-        showSection('dashboardSection');
-        renderDashboard();
-    } else {
-        showError('loginError', 'DNI no encontrado. Verifica el número o regístrate.');
-    }
-}
-
-function handleLogout() {
-    currentUser = null;
-    participantProgress = {};
-    document.getElementById('loginForm').reset();
-    showSection('loginSection');
-}
-
-function renderDashboard() {
-    updateStudentInfo();
-    renderModules();
-    renderEvaluationSection();
-    updateCertificateSection(); // MEJORADO
-}
-
-function updateStudentInfo() {
-    document.getElementById('studentName').textContent = `${currentUser.nombres} ${currentUser.apellidos}`;
-    document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`;
-}
-
-function renderModules() {
-    const container = document.getElementById('tab-modules');
-    container.innerHTML = ''; // Limpiar
-    appData.modulos.forEach(module => {
-        const moduleCard = document.createElement('div');
-        moduleCard.className = 'module-card card';
-        
-        const isCompleted = participantProgress.datos_progreso && participantProgress.datos_progreso[module.id_modulo];
-        const statusIcon = isCompleted ? '<i class="fas fa-check-circle completed"></i>' : '<i class="fas fa-clock pending"></i>';
-        
-        moduleCard.innerHTML = `
-            <div class="card__header">
-                <h3>${module.titulo_modulo} ${statusIcon}</h3>
-            </div>
-            <div class="card__body">
-                <div class="video-container">
-                    <iframe src="${module.video_url.replace("watch?v=", "embed/")}" frameborder="0" allowfullscreen></iframe>
-                </div>
-                <p><strong>Clave para marcar como visto:</strong></p>
-                <form class="module-form">
-                    <input type="hidden" name="moduleId" value="${module.id_modulo}">
-                    <div class="input-group">
-                        <input type="text" name="moduleKey" class="form-control" placeholder="Ingresa la clave aquí" ${isCompleted ? 'disabled' : ''}>
-                        <button type="submit" class="btn btn--primary" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Completado' : 'Enviar'}</button>
-                    </div>
-                    <div class="error-message" style="display: none;"><span></span></div>
-                </form>
-            </div>
-        `;
-        container.appendChild(moduleCard);
-    });
-
-    container.querySelectorAll('.module-form').forEach(form => {
-        form.addEventListener('submit', handleModuleComplete);
-    });
-}
-
-async function handleModuleComplete(event) {
-    event.preventDefault();
-    const form = event.target;
-    const moduleId = form.querySelector('input[name="moduleId"]').value;
-    const key = form.querySelector('input[name="moduleKey"]').value.trim();
-    const correctKey = appData.modulos.find(m => m.id_modulo === moduleId)?.clave;
-    const errorContainer = form.querySelector('.error-message');
-
-    if (key === correctKey) {
-        showSpinner(true);
-        errorContainer.style.display = 'none';
-        try {
-            await fetch(googleAppScriptUrl, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'updateProgress', dni: currentUser.dni, step: moduleId }),
-                headers: { 'Content-Type': 'application/json' }, mode: 'no-cors'
+        if (row.id_tema) {
+            modules[row.id_modulo].temas.push({
+                id: row.id_tema,
+                titulo: row.titulo_tema,
+                resumen: row.resumen,
+                contenido: row.contenido,
+                pregunta: row.pregunta,
+                lectura_url: row.lectura_url
             });
-            await loadDataFromGoogleSheet();
-            participantProgress = appData.progreso.find(p => p.dni.toString() === currentUser.dni) || participantProgress;
-            try { participantProgress.datos_progreso = JSON.parse(participantProgress.datos_progreso || '{}'); } catch(e) { participantProgress.datos_progreso = {}; }
-            
-            renderDashboard();
-            showModal('¡Éxito!', `El ${moduleId.replace('_', ' ')} ha sido marcado como completado.`);
-        } catch (error) {
-            showModal('Error', 'No se pudo actualizar tu progreso. Inténtalo de nuevo.');
-        } finally {
-            showSpinner(false);
-        }
-    } else {
-        errorContainer.querySelector('span').textContent = 'Clave incorrecta.';
-        errorContainer.style.display = 'block';
-    }
-}
-
-function renderEvaluationSection() {
-    const container = document.getElementById('evaluationContent');
-    container.innerHTML = '';
-    const allModulesCompleted = appData.modulos.every(m => participantProgress.datos_progreso[m.id_modulo]);
-
-    if (!allModulesCompleted) {
-        container.innerHTML = `<div class="card__body"><p>Debes completar todos los módulos de aprendizaje para desbloquear la evaluación.</p></div>`;
-        return;
-    }
-
-    const maxAttempts = parseInt(appData.config.max_intentos_evaluacion, 10);
-    const currentAttempts = parseInt(participantProgress.intentos || 0, 10);
-    const attemptsLeft = maxAttempts - currentAttempts;
-    let content = '';
-
-    if (participantProgress.estado_evaluacion === 'Aprobado') {
-        content = `<div class="alert alert-success">¡Felicidades! Has aprobado la evaluación con una nota de ${participantProgress.nota_final}.</div>`;
-    } else if (attemptsLeft <= 0) {
-        content = `<div class="alert alert-danger">Has agotado todos tus intentos para la evaluación.</div>`;
-    } else {
-        content = `
-            <p><strong>Nota Mínima para Aprobar:</strong> ${appData.config.nota_minima_aprobacion} de 10.</p>
-            <p><strong>Intentos Restantes:</strong> ${attemptsLeft}.</p>
-            <button id="startEvaluationBtn" class="btn btn--primary">Iniciar Evaluación</button>
-        `;
-    }
-    
-    container.innerHTML = `<div class="card__body">${content}</div><div id="evaluationFormContainer"></div>`;
-
-    if (document.getElementById('startEvaluationBtn')) {
-        document.getElementById('startEvaluationBtn').onclick = startEvaluation;
-    }
-}
-
-
-function startEvaluation() {
-    document.getElementById('evaluationContent').style.display = 'none';
-    const formContainer = document.getElementById('evaluationFormContainer');
-    formContainer.style.display = 'block';
-    formContainer.innerHTML = '';
-    
-    const form = document.createElement('form');
-    form.id = 'evaluationForm';
-    form.className = 'card card__body';
-    
-    appData.evaluacion.multipleChoice.forEach((q, index) => {
-        form.innerHTML += `
-            <div class="form-group">
-                <label>${index + 1}. ${q.texto}</label>
-                <div class="options-group">
-                    <label><input type="radio" name="mc_${q.id_pregunta}" value="A" required> ${q.opcion_a}</label>
-                    <label><input type="radio" name="mc_${q.id_pregunta}" value="B" required> ${q.opcion_b}</label>
-                </div>
-            </div>`;
-    });
-
-    form.innerHTML += `<h4>${appData.evaluacion.caseStudy.titulo}</h4><p><em>${appData.evaluacion.caseStudy.descripcion}</em></p>`;
-    
-    appData.evaluacion.caseStudy.questions.forEach((q, index) => {
-        form.innerHTML += `
-            <div class="form-group">
-                <label>${index + 1 + appData.evaluacion.multipleChoice.length}. ${q.texto}</label>
-                <textarea name="case_${index}" class="form-control" rows="4" required maxlength="500"></textarea>
-                <div class="char-counter">0/500</div>
-            </div>`;
-    });
-
-    form.innerHTML += `<button type="submit" class="btn btn--primary">Enviar Evaluación</button>`;
-    formContainer.appendChild(form);
-    
-    form.addEventListener('submit', handleEvaluationSubmit);
-    form.querySelectorAll('textarea').forEach(textarea => {
-        textarea.addEventListener('input', e => {
-            e.target.nextElementSibling.textContent = `${e.target.value.length}/500`;
-        });
-    });
-}
-
-async function handleEvaluationSubmit(event) {
-    event.preventDefault();
-    showSpinner(true);
-    const formData = new FormData(event.target);
-    const answers = Object.fromEntries(formData.entries());
-
-    try {
-        await fetch(googleAppScriptUrl, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'submitEvaluation', dni: currentUser.dni, answers }),
-            headers: { 'Content-Type': 'application/json' }, mode: 'no-cors'
-        });
-        showModal('Evaluación Enviada', 'Tu evaluación ha sido enviada. Los resultados se actualizarán en breve. Vuelve a consultar tu DNI en unos minutos.');
-        await loadDataFromGoogleSheet();
-        participantProgress = appData.progreso.find(p => p.dni.toString() === currentUser.dni) || participantProgress;
-        try { participantProgress.datos_progreso = JSON.parse(participantProgress.datos_progreso || '{}'); } catch(e) { participantProgress.datos_progreso = {}; }
-        renderDashboard();
-    } catch (error) {
-        showModal('Error', 'Hubo un problema al enviar tu evaluación.');
-    } finally {
-        showSpinner(false);
-    }
-}
-
-// MEJORADO: Lógica completa para la sección de certificado
-function updateCertificateSection() {
-    const section = document.getElementById('certificateSection');
-    section.innerHTML = '';
-    
-    if (participantProgress.estado_evaluacion === 'Aprobado' && participantProgress.codigo_certificado) {
-        const userCertType = currentUser.certificado;
-        const certConfig = userCertType.includes('DIGITAL') || userCertType.includes('digital') ? appData.config.cert_digital : appData.config.cert_fisico;
-        const contactInfo = appData.config.cert_fisico_contacto || "";
-        const [contactName, contactNumber] = contactInfo.split('-').map(s => s.trim());
-        const text = encodeURIComponent(`Hola ${contactName}, mi nombre es ${currentUser.nombres} ${currentUser.apellidos} con DNI ${currentUser.dni}. He aprobado el curso DIT y deseo coordinar la entrega de mi certificado físico. Código de Certificado: ${participantProgress.codigo_certificado}.`);
-
-        let physicalCertHtml = '';
-        if (userCertType.includes('FÍSICO') || userCertType.includes('físico')) {
-           physicalCertHtml = `
-                <div class="physical-cert-instructions" style="margin-top: 20px;">
-                    <div class="alert alert-info">
-                        <h5>Pasos para obtener tu Certificado Físico:</h5>
-                        <p>1. Realiza el pago de <strong>${certConfig.costo}</strong> a través de Yape, Plin o transferencia bancaria al <strong>${contactNumber}</strong> (Edunova Peru Sac).<br>
-                        2. Notifique su pago enviando el comprobante por WhatsApp.</p>
-                        <a href="https://wa.me/${contactNumber}?text=${text}" target="_blank" class="btn btn--primary" style="margin-top: 10px;">
-                            <i class="fab fa-whatsapp"></i> <strong>Solicitar Certificado Físico</strong>
-                        </a>
-                    </div>
-                </div>`;
-        }
-
-        section.innerHTML = `
-            <div class="card__body certificate-display">
-                <div class="cert-icon"><i class="fas fa-award"></i></div>
-                <h4>¡Felicidades, ${currentUser.nombres}!</h4>
-                <p>Has completado exitosamente el curso.</p>
-                <p><strong>Tu código de certificado único es:</strong></p>
-                <div class="certificate-code">${participantProgress.codigo_certificado}</div>
-                <hr>
-                <h5>Detalles de tu Certificado</h5>
-                <p><strong>Tipo:</strong> ${certConfig.nombre}</p>
-                <p><strong>Costo:</strong> ${certConfig.costo}</p>
-                <p><em>${certConfig.desc}</em></p>
-                <!-- CORREGIDO: Botón para verificar en Edunova -->
-                <a href="https://edunova.edu.pe/verify/" target="_blank" class="btn btn--outline" style="margin-top: 20px;">
-                    <i class="fas fa-check-circle"></i> Verificar en Edunova
-                </a>
-            </div>
-            <div class="card__body">${physicalCertHtml}</div>
-        `;
-        section.style.display = 'block'; 
-    } else { 
-        section.innerHTML = `<div class="card__body"><p>Debes aprobar la evaluación final para poder ver la información de tu certificado.</p></div>`;
-        section.style.display = 'block';
-    } 
-}
-
-function showAdminPanel() {
-    showSection('adminSection');
-    renderAdminStats();
-    buildAndShowAdminTable();
-}
-
-// MEJORADO: Las estadísticas ahora son dinámicas
-function renderAdminStats() {
-    const statsContainer = document.getElementById('statsGrid');
-    const matriculados = appData.matriculados.length;
-    const aprobados = appData.progreso.filter(p => p.estado_evaluacion === 'Aprobado').length;
-    const certFisico = appData.matriculados.filter(m => m.certificado.toLowerCase().includes('físico')).length;
-    const certDigital = appData.matriculados.filter(m => m.certificado.toLowerCase().includes('digital')).length;
-
-    statsContainer.innerHTML = `
-        <div class="stat-card card"><div class="card__body"><i class="fas fa-users"></i><div><h4>${matriculados}</h4><p>Matriculados</p></div></div></div>
-        <div class="stat-card card"><div class="card__body"><i class="fas fa-user-check"></i><div><h4>${aprobados}</h4><p>Aprobados</p></div></div></div>
-        <div class="stat-card card"><div class="card__body"><i class="fas fa-file-invoice"></i><div><h4>${certFisico}</h4><p>Cert. Físicos</p></div></div></div>
-        <div class="stat-card card"><div class="card__body"><i class="fas fa-desktop"></i><div><h4>${certDigital}</h4><p>Cert. Digitales</p></div></div></div>
-    `;
-}
-
-function buildAndShowAdminTable() {
-    controlUnificado = appData.matriculados.map(matriculado => {
-        const progreso = appData.progreso.find(p => p.dni === matriculado.dni) || {};
-        const progresoData = typeof progreso.datos_progreso === 'string' && progreso.datos_progreso ? JSON.parse(progreso.datos_progreso) : (progreso.datos_progreso || {});
-        
-        return {
-            ...matriculado,
-            progreso: progresoData,
-            estado_evaluacion: progreso.estado_evaluacion || 'Pendiente',
-        };
-    });
-    updateProgressTable();
-}
-
-function updateProgressTable(filteredData = null) {
-    const dataToRender = filteredData || controlUnificado;
-    const tableBody = document.getElementById('progressTable').querySelector('tbody');
-    tableBody.innerHTML = '';
-    
-    dataToRender.forEach((user, index) => {
-        const row = tableBody.insertRow();
-        const evalAprobada = user.estado_evaluacion === 'Aprobado';
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${user.dni}</td>
-            <td>${user.nombres} ${user.apellidos}</td>
-            <td>${user.celular}</td>
-            <td>${user.certificado.toLowerCase().includes('físico') ? 'Físico' : 'Digital'}</td>
-            <td>${user.progreso.modulo_1 ? '✅' : '❌'}</td>
-            <td>${user.progreso.modulo_2 ? '✅' : '❌'}</td>
-            <td>${evalAprobada ? '✅' : '❌'}</td>
-            <td>${evalAprobada ? '✅' : '❌'}</td>
-            <td>${evalAprobada && user.progreso.pago_realizado ? '✅' : '❌'}</td> <!-- Asumiendo un campo 'pago_realizado' -->
-        `;
-    });
-}
-
-function filterAdminTable(searchTerm) {
-    const filtered = controlUnificado.filter(user => 
-        user.dni.toString().includes(searchTerm) || 
-        `${user.nombres} ${user.apellidos}`.toLowerCase().includes(searchTerm)
-    );
-    updateProgressTable(filtered);
-}
-
-// --- Modals and Utility Functions ---
-function showPasswordModal(type) {
-    const modal = document.getElementById('passwordModal');
-    document.getElementById('passwordTitle').textContent = 'Acceso de Administrador';
-    modal.dataset.type = type;
-    modal.classList.remove('hidden');
-    document.getElementById('passwordInput').focus();
-}
-
-function setupPasswordModalControls() {
-    const modal = document.getElementById('passwordModal');
-    const form = document.getElementById('passwordForm');
-    const cancelBtn = document.getElementById('passwordCancel');
-    
-    const closeModal = () => {
-        modal.classList.add('hidden');
-        form.reset();
-        document.getElementById('passwordError').style.display = 'none';
-    };
-
-    cancelBtn.onclick = closeModal;
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const password = document.getElementById('passwordInput').value;
-        const correctPassword = appData.config[`admin_password`];
-        
-        if (password === correctPassword) {
-            closeModal();
-            showAdminPanel();
-        } else {
-            document.getElementById('passwordError').style.display = 'block';
         }
     });
+    return Object.values(modules);
 }
 
-function showSpinner(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
-function setupModalControls() { const m = document.getElementById('messageModal'); document.getElementById('modalConfirm').onclick = () => m.classList.add('hidden'); document.getElementById('closeModal').onclick = () => m.classList.add('hidden'); }
-function showError(id, msg) { const e = document.getElementById(id); if (e) { e.querySelector('span').textContent = msg; e.style.display = 'block'; } }
-function showModal(title, message, callback) {
-    const modal = document.getElementById('messageModal');
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalMessage').innerHTML = message;
-    modal.classList.remove('hidden');
-    document.getElementById('modalConfirm').onclick = () => {
-        modal.classList.add('hidden');
-        if (callback) callback();
-    };
+function parseEvaluation(evalData) {
+    if (!Array.isArray(evalData)) throw new Error("Los datos de la pestaña 'Evaluacion' no se pudieron leer.");
+    const evaluation = { preguntas: [], caso_practico: { titulo: '', descripcion: '', preguntas: [] } };
+    evalData.forEach(row => {
+        if (!row.id_pregunta) return;
+        if (row.id_pregunta === 'pregunta_mc') {
+            const correctLetter = (row.respuesta_correcta || '').toString().trim().toUpperCase();
+            const correctMap = {'A': 0, 'B': 1};
+            evaluation.preguntas.push({
+                texto: row.texto,
+                opciones: [row.opcion_a, row.opcion_b].filter(Boolean),
+                correcta: correctMap[correctLetter]
+            });
+        } else if (row.id_pregunta === 'caso_titulo') {
+            evaluation.caso_practico.titulo = row.texto;
+        } else if (row.id_pregunta === 'caso_descripcion') {
+            evaluation.caso_practico.descripcion = row.texto;
+        } else if (row.id_pregunta === 'pregunta_caso') {
+            evaluation.caso_practico.preguntas.push(row.texto);
+        }
+    });
+    return evaluation;
+}
+
+function generateCertificateCode(ss) {
+    const sheet = ss.getSheetByName('Progreso');
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const codeIndex = headers.indexOf('codigo_certificado');
+    if (codeIndex === -1) { 
+      return (parseConfig(sheetToJSON(ss.getSheetByName('Configuracion'))).correlativo_certificado_base || 25090001).toString();
+    }
+    
+    const range = sheet.getRange(2, codeIndex + 1, sheet.getLastRow());
+    const values = range.getValues().flat().filter(String).map(Number).filter(n => !isNaN(n) && n > 0);
+    
+    if (values.length === 0) {
+        return (parseConfig(sheetToJSON(ss.getSheetByName('Configuracion'))).correlativo_certificado_base || 25090001).toString();
+    }
+    
+    const lastCode = Math.max(...values);
+    return (lastCode + 1).toString();
+}
+
+function updateProgressField(ss, dni, fieldName, value) {
+  const sheet = ss.getSheetByName('Progreso');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const fieldIndex = headers.indexOf(fieldName);
+  const dniIndex = headers.indexOf('dni');
+  
+  if (fieldIndex === -1 || dniIndex === -1) return;
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][dniIndex] && data[i][dniIndex].toString() === dni.toString()) {
+      sheet.getRange(i + 1, fieldIndex + 1).setValue(value);
+      return;
+    }
+  }
 }
 

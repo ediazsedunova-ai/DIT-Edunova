@@ -91,16 +91,21 @@
                                 <label class="form-label">Lugar de Residencia:</label>
                                 <input type="text" id="regResidencia" class="form-control" placeholder="Ciudad, Departamento" required maxlength="100">
                             </div>
+
+                            
                             <div class="form-group">
-                                <label class="form-label">Opción de Certificado:</label>
-                                <div id="certificateOptionsContainer" class="certificado-options">
-                                    <!-- Options loaded dynamically -->
-                                </div>
-                            </div>
-                             <a id="privacyPolicyLinkBtn" href="#" target="_blank" class="btn btn--outline btn--sm" style="display:none;">
-    Ver
-  </a>
+  <label class="checkbox-container">
+    <input type="checkbox" id="regPrivacidad" required>
+    <span class="checkmark"></span>
+    <span id="privacyPolicyText">
+      Acepto las Políticas de Privacidad <a id="privacyPolicyLink" href="https://edunova.edu.pe/privacy-policy/" target="_blank">(ver)</a>
+    </span>
+  </label>
 </div>
+
+
+
+                    
                             </div>
                             <div class="form-actions">
                                 <button type="button" id="backToLogin" class="btn btn--secondary">Cancelar</button>
@@ -187,3 +192,4 @@
     <script src="app.js"></script>
 </body>
 </html>
+

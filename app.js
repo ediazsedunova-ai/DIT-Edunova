@@ -1,680 +1,147 @@
-// -----------------------------------------------------------------------------
-// CONFIGURACIÓN PRINCIPAL - ¡IMPORTANTE!
-// -----------------------------------------------------------------------------
-// Pega la URL de tu Google Apps Script implementado aquí.
-const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbwuuJERNMU7ZrCrftQIzxn_dlIe4lzXh-SiseYAQzlwCWf6m9OUZ4fxlxe3Ubx0jGW7Hw/exec';
-// -----------------------------------------------------------------------------
+:root {
+  /* Primitive Color Tokens */
+  --color-white: rgba(255, 255, 255, 1);
+  --color-black: rgba(0, 0, 0, 1);
+  --color-background: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-text: #212529;
+  --color-text-secondary: #6c757d;
+  --color-border: #dee2e6;
+  --color-primary: #007bff;
+  --color-primary-hover: #0056b3;
+  --color-success: #28a745;
+  --color-error: #dc3545;
+  --color-warning: #ffc107;
+  --color-whatsapp: #25D366;
 
-// Global application state
-let appData = {};
-let currentUser = null;
-let participantProgress = {};
-let controlUnificado = [];
+  /* Sizing & Spacing */
+  --space-4: 4px; --space-8: 8px; --space-12: 12px; --space-16: 16px;
+  --space-20: 20px; --space-24: 24px; --space-32: 32px;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Initializing DIT System...');
-    showSpinner(true);
-    await loadDataFromGoogleSheet();
-    showSpinner(false);
-
-    if (googleAppScriptUrl.includes('PEGAR_AQUÍ')) {
-        showModal('Error de Configuración', 'La aplicación no está conectada. Por favor, edita el archivo `app.js` y añade la URL de tu Google Apps Script.');
-        return;
-    }
-
-    setupEventListeners();
-    showSection('loginSection');
-});
-
-async function loadDataFromGoogleSheet() {
-    try {
-        const response = await fetch(googleAppScriptUrl);
-        if (!response.ok) throw new Error(`Error de red: ${response.status}.`);
-        const data = await response.json();
-        if (data.status === 'error') throw new Error(`Error en Apps Script: ${data.message}`);
-        appData = data;
-        console.log('✅ Data loaded successfully:', appData);
-        initializeSystemData();
-    } catch (error) {
-        console.error('❌ Failed to load data:', error);
-        showModal('Error Crítico de Carga', `No se pudieron cargar los datos desde Google Sheets.<br><br><b>Mensaje del Servidor:</b><br><i>${error.message}</i><br><br><b>Posibles Soluciones:</b><br>1. Verifica que la URL en <code>app.js</code> es correcta.<br>2. Revisa que todas las pestañas en tu Google Sheet tengan el nombre exacto pedido en las instrucciones.<br>3. Asegúrate de haber implementado el script para que "Cualquier usuario" tenga acceso.`);
-    }
+  /* Appearance */
+  --radius-sm: 4px; --radius-base: 6px; --radius-lg: 8px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.1);
 }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--color-background); color: var(--color-text); line-height: 1.5; }
+.container { max-width: 960px; margin: 0 auto; padding: var(--space-20); }
 
-function initializeSystemData() {
-    buildControlUnificado();
-    initializeAllProgress();
-    const whatsappBtn = document.getElementById('whatsappGroupBtn');
-    if (whatsappBtn && appData.configuracion.whatsapp_group_link) {
-        whatsappBtn.href = appData.configuracion.whatsapp_group_link;
-    }
+/* Header */
+.header { background: linear-gradient(90deg, #0056b3, #007bff); color: white; padding: var(--space-16) var(--space-20); box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 1000;}
+.header-content { display: flex; justify-content: space-between; align-items: center; }
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo h1 { margin: 0; font-size: 1.75rem; }
+.course-title { text-align: center; }
+.course-title h2 { margin: 0; font-size: 1.25rem; }
+.course-title p { margin: 0; font-size: 0.9rem; opacity: 0.8; }
+.header-actions { display: flex; align-items: center; gap: var(--space-12); }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-8); padding: var(--space-8) var(--space-16); border-radius: var(--radius-base); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; border: 1px solid transparent; text-decoration: none; }
+.btn i { line-height: 1; }
+.btn--primary { background-color: var(--color-primary); color: white; }
+.btn--primary:hover { background-color: var(--color-primary-hover); }
+.btn--secondary { background-color: #6c757d; color: white; }
+.btn--secondary:hover { background-color: #5a6268; }
+.btn--success { background-color: var(--color-success); color: white; }
+.btn--outline { background-color: transparent; border-color: var(--color-border); color: var(--color-text); }
+.btn--outline:hover { background-color: #f8f9fa; }
+.btn--whatsapp { background-color: var(--color-whatsapp); color: white; border-color: var(--color-whatsapp); }
+.btn--whatsapp:hover { background-color: #128C7E; }
+.btn--sm { padding: var(--space-4) var(--space-12); font-size: 0.8rem; }
+.btn--full-width { width: 100%; }
+.btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* Forms & Cards */
+.card { background-color: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); }
+.card__body { padding: var(--space-24); }
+.welcome-card { text-align: center; }
+.form-group { margin-bottom: var(--space-16); text-align: left; }
+.form-label { display: block; margin-bottom: var(--space-8); font-weight: 500; }
+.form-control { display: block; width: 100%; padding: var(--space-8) var(--space-12); font-size: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-base); box-sizing: border-box; }
+.form-actions { display: flex; justify-content: flex-end; gap: var(--space-12); margin-top: var(--space-20); }
+.certificado-options { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16); }
+.option-card { border: 2px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-16); cursor: pointer; transition: all 0.2s ease; }
+.option-card:has(input:checked) { border-color: var(--color-primary); background-color: #e7f1ff; }
+.option-card input { display: none; }
+.checkbox-container { display: flex; align-items: center; gap: var(--space-8); cursor: pointer; }
+.checkmark { width: 18px; height: 18px; border: 2px solid var(--color-border); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.checkbox-container input:checked + .checkmark { background-color: var(--color-primary); border-color: var(--color-primary); }
+.checkbox-container input:checked + .checkmark::after { content: '✔'; color: white; font-size: 12px; }
+.checkbox-container input { display: none; }
+
+
+/* Steps & Dashboard */
+.dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-24); }
+.progress-card { margin-bottom: var(--space-24); }
+.steps-container { display: flex; flex-direction: column; gap: var(--space-12); }
+.step-item { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.step-header { display: flex; align-items: center; gap: var(--space-16); padding: var(--space-12); background-color: #f8f9fa; cursor: pointer; }
+.step-number { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background-color: var(--color-border); color: var(--color-text-secondary); flex-shrink: 0; }
+.step-title { flex-grow: 1; font-weight: 500; }
+.step-status { font-size: 0.8rem; font-weight: bold; }
+.step-actions { padding: var(--space-16); border-top: 1px solid var(--color-border); }
+.step-item.active > .step-header { background-color: #e7f1ff; }
+.step-item.active .step-number { background-color: var(--color-primary); color: white; }
+.step-item.completed > .step-header { background-color: #d4edda; }
+.step-item.completed .step-number { background-color: var(--color-success); color: white; }
+.step-item.disabled { background-color: #fdfdfe; opacity: 0.7; }
+.step-item.disabled .step-header { cursor: not-allowed; }
+
+/* Certificate Section */
+.certificate-section { text-align: center; padding: var(--space-24); border: 2px solid var(--color-success); border-radius: var(--radius-lg); background-color: #f0fff4; margin-top: 2rem;}
+.certificate-section h4 { color: var(--color-success); margin-top: 0; font-size: 1.5rem; }
+.certificate-section p { margin-bottom: var(--space-8); }
+.certificate-section .promo-section { margin-top: var(--space-24); padding-top: var(--space-16); border-top: 1px solid #c3e6cb; }
+.promo-section h5 { font-size: 1.1rem; }
+
+/* Admin Panel */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-20); margin-bottom: var(--space-24); }
+.stat-card .card__body { display: flex; align-items: center; gap: var(--space-16); }
+.stat-card i { font-size: 2rem; color: var(--color-primary); }
+.stat-card h4 { margin: 0; font-size: 1.5rem; }
+.table-container { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;}
+.table th, .table td { padding: var(--space-8) var(--space-12); text-align: left; border-bottom: 1px solid var(--color-border); }
+.table th { background-color: #f8f9fa; }
+.status-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+.status-completed { background-color: #d4edda; color: #155724; }
+.status-pending { background-color: #fff3cd; color: #856404; }
+
+/* Evaluation Specific Styles */
+.question-item { border: 1px solid var(--color-border); border-radius: var(--radius-base); padding: var(--space-16); margin-bottom: var(--space-16); }
+.question-text { font-weight: 500; margin-bottom: var(--space-12); }
+.question-options { display: flex; flex-direction: column; gap: var(--space-8); }
+.option-item { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8); border-radius: var(--radius-sm); cursor: pointer; }
+.option-item:hover { background-color: #f8f9fa; }
+.option-item span { flex-grow: 1; }
+.case-study-section { margin-top: var(--space-32); }
+.case-description { background-color: #e7f1ff; padding: var(--space-12); border-radius: var(--radius-base); margin-bottom: var(--space-16); border-left: 4px solid var(--color-primary); }
+.exam-info { background-color: #fff3cd; padding: var(--space-12); border-radius: var(--radius-base); margin-bottom: var(--space-16); border-left: 4px solid var(--color-warning); }
+
+/* Utilities & Modals */
+.error-message { background-color: #f8d7da; color: #721c24; padding: var(--space-12); border-radius: var(--radius-base); margin-top: var(--space-16); }
+.success-message { background-color: #d4edda; color: #155724; padding: var(--space-12); border-radius: var(--radius-base); }
+#loadingSpinner { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+.spinner { border: 8px solid #f3f3f3; border-top: 8px solid var(--color-primary); border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1050; }
+.modal.hidden { display: none; }
+.modal-content { background: var(--color-surface); border-radius: var(--radius-lg); max-width: 500px; width: 90%; }
+.modal-header { padding: var(--space-16); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
+.modal-body { padding: var(--space-20); }
+.modal-footer { padding: var(--space-12) var(--space-20); text-align: right; border-top: 1px solid var(--color-border); }
+.char-counter { font-size: 0.75rem; text-align: right; color: var(--color-text-secondary); }
+.question-item.correct { border-left: 4px solid var(--color-success); background-color: #f0fff4; }
+.question-item.incorrect { border-left: 4px solid var(--color-error); background-color: #fff0f1; }
+.option-item.correct-answer { background-color: #d4edda !important; font-weight: bold; }
+.option-item.incorrect { background-color: #f8d7da !important; }
+
+
+@media (max-width: 768px) {
+    .header-content { flex-direction: column; gap: var(--space-12); }
+    .course-title { text-align: center; }
+    .certificado-options { grid-template-columns: 1fr; }
 }
-
-function setupEventListeners() {
-    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
-    document.getElementById('registroForm')?.addEventListener('submit', handleRegistro);
-    document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
-    document.getElementById('backToLogin')?.addEventListener('click', () => showSection('loginSection'));
-    document.getElementById('adminBtn')?.addEventListener('click', () => requestAccess('admin'));
-    document.getElementById('backToLoginAdmin')?.addEventListener('click', handleLogout);
-    document.getElementById('exportCsvBtn')?.addEventListener('click', exportProgressToCsv);
-    setupModalControls();
-}
-
-function showSection(sectionName) {
-    ['loginSection', 'registroSection', 'certificationSteps', 'adminPanel'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
-    document.getElementById('whatsappGroupBtn').style.display = (sectionName === 'certificationSteps' || sectionName === 'adminPanel') ? 'inline-flex' : 'none';
-    const target = document.getElementById(sectionName);
-    if (target) target.style.display = 'block';
-}
-
-function handleLogin(e) { 
-    e.preventDefault(); 
-    const dni = document.getElementById('dniInput').value.trim();
-    if (!/^\d{8}$/.test(dni)) {
-        showError('loginError', 'DNI inválido. Debe contener 8 dígitos.');
-        return;
-    }
-    const participant = controlUnificado.find(u => u.dni && u.dni.toString() === dni);
-    if (participant) {
-        currentUser = participant;
-        updateCertificationSteps();
-        showSection('certificationSteps');
-        document.getElementById('loginError').style.display = 'none';
-    } else {
-        showRegistroForm(dni);
-    }
-}
-
-function showRegistroForm(dni) {
-    document.getElementById('regDni').value = dni;
-    const optionsContainer = document.getElementById('certificateOptionsContainer');
-    optionsContainer.innerHTML = appData.configuracion.opciones_certificado.map(opt => `
-        <label class="option-card">
-            <input type="radio" name="tipoCertificado" value="${opt.id}" ${opt.id === 'digital' ? 'checked' : ''}>
-            <div class="option-content">
-                <h5>${opt.nombre}</h5>
-                <p><strong>Costo:</strong> ${opt.costo}</p>
-                <p>${opt.desc}</p>
-            </div>
-        </label>
-    `).join('');
-    showSection('registroSection');
-}
-
-async function handleRegistro(e) {
-    e.preventDefault();
-    
-    if (!document.getElementById('regPrivacidad').checked) {
-        showModal('Aceptación Requerida', 'Debe aceptar las políticas de privacidad para continuar.');
-        return;
-    }
-
-    const registerButton = e.target.querySelector('button[type="submit"]');
-    setButtonLoading(registerButton, true, 'Registrando...');
-
-    const formData = {
-        dni: document.getElementById('regDni').value,
-        nombres: document.getElementById('regNombres').value,
-        apellidos: document.getElementById('regApellidos').value,
-        celular: document.getElementById('regCelular').value,
-        email: document.getElementById('regEmail').value,
-        residencia: document.getElementById('regResidencia').value,
-        certificado: document.querySelector('input[name="tipoCertificado"]:checked').value,
-        fecha_registro: new Date().toISOString().split('T')[0]
-    };
-
-    const response = await postDataToGoogleSheet('registerUser', formData);
-    
-    if (response.status === 'success') {
-        const newUser = { ...formData, nombre_completo: `${formData.nombres} ${formData.apellidos}`, dni: formData.dni.toString() };
-        appData.nuevos_registros.push(newUser);
-        controlUnificado.push(newUser);
-        participantProgress[newUser.dni] = response.newProgress;
-        currentUser = newUser;
-        
-        setButtonLoading(registerButton, false, 'Completar Registro');
-        showModal('Registro Exitoso', `¡Bienvenido(a) ${formData.nombres}!<br>Tu registro ha sido completado.`, () => {
-             updateCertificationSteps();
-             showSection('certificationSteps');
-        });
-    } else {
-        setButtonLoading(registerButton, false, 'Completar Registro');
-        showModal('Error de Registro', response.message);
-    }
-}
-
-
-function requestAccess(type) {
-    const passwordModal = document.getElementById('passwordModal');
-    document.getElementById('passwordTitle').textContent = `Acceso de ${type === 'admin' ? 'Administrador' : 'Editor'}`;
-    const passwordInput = document.getElementById('passwordInput');
-    passwordInput.value = '';
-    document.getElementById('passwordError').style.display = 'none';
-    passwordModal.classList.remove('hidden');
-    passwordInput.focus();
-    
-    const form = document.getElementById('passwordForm');
-    const submitBtn = document.getElementById('passwordSubmit');
-    
-    const submitHandler = (e) => {
-      e.preventDefault();
-      const password = passwordInput.value;
-      const correctPassword = appData.configuracion.credenciales[`${type}_password`];
-      if (password === correctPassword) {
-          passwordModal.classList.add('hidden');
-          showAdminPanel();
-      } else {
-          document.getElementById('passwordError').style.display = 'block';
-      }
-    };
-
-    form.onsubmit = submitHandler;
-    submitBtn.onclick = submitHandler;
-    document.getElementById('passwordCancel').onclick = () => passwordModal.classList.add('hidden');
-    document.getElementById('closePasswordModal').onclick = () => passwordModal.classList.add('hidden');
-
-}
-
-function showAdminPanel() {
-    const approvedCount = controlUnificado.filter(p => participantProgress[p.dni]?.eval_aprobado).length;
-    const certificatesGenerated = controlUnificado.filter(p => participantProgress[p.dni]?.certificate_code).length;
-    document.getElementById('totalParticipants').textContent = controlUnificado.length;
-    document.getElementById('approvedCount').textContent = approvedCount;
-    document.getElementById('certificatesGenerated').textContent = certificatesGenerated;
-
-    const tbody = document.querySelector('#progressTable tbody');
-    tbody.innerHTML = '';
-    controlUnificado.forEach(p => {
-        const progress = participantProgress[p.dni] || {};
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>'${p.dni}</td>
-            <td>${p.nombre_completo}</td>
-            <td>${getStatusBadge(progress.step1_completed)}</td>
-            <td>${getStatusBadge(progress.step2_completed)}</td>
-            <td>${getStatusBadge(progress.step3_completed)}</td>
-            <td>${getStatusBadge(progress.step4_completed)}</td>
-            <td>${getStatusBadge(progress.step5_completed)}</td>
-        `;
-        tbody.appendChild(row);
-    });
-    showSection('adminPanel');
-}
-
-function getStatusBadge(isCompleted) {
-    const className = isCompleted ? 'status-completed' : 'status-pending';
-    const text = isCompleted ? 'Completado' : 'Pendiente';
-    return `<span class="status-badge ${className}">${text}</span>`;
-}
-
-function exportProgressToCsv() {
-    let csvContent = "data:text/csv;charset=utf-8,DNI,Nombre,Paso1,Paso2,Paso3,Paso4,Paso5,Aprobado,CodigoCertificado\n";
-    controlUnificado.forEach(p => {
-        const progress = participantProgress[p.dni] || {};
-        const row = [
-            `'${p.dni}`, `"${p.nombre_completo}"`,
-            progress.step1_completed ? 'SI' : 'NO', progress.step2_completed ? 'SI' : 'NO',
-            progress.step3_completed ? 'SI' : 'NO', progress.step4_completed ? 'SI' : 'NO',
-            progress.step5_completed ? 'SI' : 'NO', progress.eval_aprobado ? 'SI' : 'NO',
-            progress.certificate_code || ''
-        ].join(',');
-        csvContent += row + "\r\n";
-    });
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "progreso_curso_dit.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function updateCertificationSteps() {
-    if (!currentUser) return;
-    updateStudentInfo();
-    setupStep('step1', isStepCompleted('step1'), renderStep1Content, validateSession1);
-    setupStep('step2', isStepCompleted('step2'), (c) => renderModuleContent(c, 0), null, isStepCompleted('step1'));
-    setupStep('step3', isStepCompleted('step3'), renderStep3Content, validateSession2, isStepCompleted('step2'));
-    setupStep('step4', isStepCompleted('step4'), (c) => renderModuleContent(c, 1), null, isStepCompleted('step3'));
-    setupStep('step5', isStepCompleted('step5'), renderEvaluationContent, submitExam, isStepCompleted('step4'));
-    updateCertificateSection();
-}
-
-function setupStep(stepId, isCompleted, renderFn, submitFn, isEnabled = true) {
-    const stepEl = document.getElementById(stepId);
-    if (!stepEl) return;
-    const h = stepEl.querySelector('.step-header');
-    const a = document.getElementById(`${stepId}Actions`);
-    const s = document.getElementById(`${stepId}Status`);
-    stepEl.className = 'step-item';
-    if (isCompleted) {
-        stepEl.classList.add('completed');
-        s.textContent = '✅ Completado';
-        a.style.display = 'none';
-        h.onclick = null;
-    } else if (isEnabled) {
-        stepEl.classList.add('active');
-        s.textContent = '🎯 Disponible';
-        h.onclick = () => {
-            const isVisible = a.style.display === 'block';
-            a.style.display = isVisible ? 'none' : 'block';
-            if (!isVisible && renderFn) {
-                 renderFn(document.getElementById(`${stepId}Content`), submitFn);
-            }
-        };
-    } else {
-        stepEl.classList.add('disabled');
-        s.textContent = '🔒 Bloqueado';
-        a.style.display = 'none';
-        h.onclick = null;
-    }
-}
-
-function renderStep1Content(container, submitFn) {
-    container.innerHTML = `<p>Vea la grabación y escriba la palabra clave para validar.</p>
-    <a href="${appData.configuracion.enlaces_grabaciones.sesion1}" target="_blank" class="btn btn--secondary">Ver Video Sesión 1</a>
-    <form id="session1Form" class="form-group">
-        <input id="session1Code" class="form-control" placeholder="Palabra Clave Sesión 1" required style="margin-top:1rem;" maxlength="50">
-        <div class="form-actions" style="justify-content: flex-start;"><button type="submit" class="btn btn--primary">Validar</button></div>
-    </form>`;
-    document.getElementById('session1Form').addEventListener('submit', submitFn);
-}
-async function validateSession1(e) {
-    e.preventDefault();
-    const button = e.target.querySelector('button[type="submit"]');
-    setButtonLoading(button, true, 'Validando...');
-    if (document.getElementById('session1Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion1.toUpperCase()) {
-        await updateUserProgress('step1_completed', true);
-    } else {
-        showModal('Error', 'Palabra clave incorrecta.');
-        setButtonLoading(button, false, 'Validar');
-    }
-}
-
-function renderModuleContent(container, moduleIndex) {
-    const module = appData.modulos[moduleIndex];
-    const progress = participantProgress[currentUser.dni];
-    container.innerHTML = `
-        ${module.temas.map(tema => `
-            <div class="topic-item">
-                <h5>${tema.titulo}</h5>
-                <p>${tema.resumen}</p>
-                <a href="${tema.lectura_url}" target="_blank" class="btn btn--secondary btn--sm">Leer artículo completo</a>
-                <div class="comment-form form-group">
-                    <textarea class="form-control" id="comment_${tema.id}" 
-                              placeholder="Escriba su reflexión aquí (mínimo 50 caracteres)..." 
-                              maxlength="2000" 
-                              oninput="updateCharCounter('comment_${tema.id}', 'counter_${tema.id}')">${progress.comments?.[tema.id] || ''}</textarea>
-                    <div id="counter_${tema.id}" class="char-counter"></div>
-                </div>
-            </div>
-        `).join('')}
-        <div class="form-actions" style="justify-content: flex-start;">
-            <button id="completeModuleBtn_${moduleIndex}" class="btn btn--primary">Guardar y Completar Módulo</button>
-        </div>
-    `;
-    
-    module.temas.forEach(tema => updateCharCounter(`comment_${tema.id}`, `counter_${tema.id}`));
-
-    const completeBtn = document.getElementById(`completeModuleBtn_${moduleIndex}`);
-    completeBtn.onclick = async () => {
-        setButtonLoading(completeBtn, true, 'Guardando...');
-        let allValid = true;
-        if (!progress.comments) progress.comments = {};
-        module.temas.forEach(tema => {
-            const comment = document.getElementById(`comment_${tema.id}`).value;
-            if (comment.trim().length < 50) {
-                allValid = false;
-            }
-            progress.comments[tema.id] = comment;
-        });
-        if (allValid) {
-            const stepKey = moduleIndex === 0 ? 'step2_completed' : 'step4_completed';
-            await updateUserProgress(stepKey, true);
-        } else {
-            showModal('Incompleto', 'Debe escribir una reflexión de al menos 50 caracteres para cada tema.');
-            setButtonLoading(completeBtn, false, 'Guardar y Completar Módulo');
-        }
-    };
-}
-
-function renderStep3Content(container, submitFn) {
-     container.innerHTML = `<p>Vea la grabación y escriba la palabra clave para validar.</p>
-    <a href="${appData.configuracion.enlaces_grabaciones.sesion2}" target="_blank" class="btn btn--secondary">Ver Video Sesión 2</a>
-    <form id="session2Form" class="form-group">
-        <input id="session2Code" class="form-control" placeholder="Palabra Clave Sesión 2" required style="margin-top:1rem;" maxlength="50">
-        <div class="form-actions" style="justify-content: flex-start;"><button type="submit" class="btn btn--primary">Validar</button></div>
-    </form>`;
-    document.getElementById('session2Form').addEventListener('submit', submitFn);
-}
-async function validateSession2(e) {
-    e.preventDefault();
-    const button = e.target.querySelector('button[type="submit"]');
-    setButtonLoading(button, true, 'Validando...');
-    if (document.getElementById('session2Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion2.toUpperCase()) {
-        await updateUserProgress('step3_completed', true);
-    } else {
-        showModal('Error', 'Palabra clave incorrecta.');
-        setButtonLoading(button, false, 'Validar');
-    }
-}
-
-function renderEvaluationContent(container, submitFn) {
-    const progress = participantProgress[currentUser.dni];
-    
-    if (progress.eval_aprobado) {
-        container.innerHTML = `<div class="success-message">Ya has completado y aprobado esta evaluación.</div>`;
-        return;
-    }
-
-    const remaining = appData.configuracion.max_intentos_evaluacion - (progress.eval_intentos || 0);
-    const caseAnswers = progress.last_case_answers || {};
-    const caseStudy = appData.evaluacion.caso_practico;
-
-    if (remaining <= 0) {
-        container.innerHTML = `<div class="error-message">Has agotado todos tus intentos para la evaluación.</div>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="exam-info"><strong>Intentos restantes:</strong> ${remaining}</div>
-        <div id="examContainer">
-            <form id="examForm">
-                <h5>Preguntas de Opción Múltiple</h5>
-                ${appData.evaluacion.preguntas.map((q, i) => `
-                <div class="question-item" id="q-item-${i}">
-                    <p class="question-text">${i + 1}. ${q.texto}</p>
-                    <div class="question-options">${q.opciones.map((opt, j) => `
-                        <label class="option-item" id="q${i}-opt${j}"><input type="radio" name="q${i}" value="${j}" required><span>${opt}</span></label>
-                    `).join('')}</div>
-                </div>`).join('')}
-                
-                <div class="case-study-section">
-                    <h5>Caso Práctico: ${caseStudy.titulo}</h5>
-                    <div class="case-description">
-                        <p><strong>Situación:</strong> ${caseStudy.descripcion}</p>
-                    </div>
-                    ${caseStudy.preguntas.map((cp, i) => `
-                    <div class="form-group">
-                        <label class="form-label"><strong>${i + 1}.</strong> ${cp}</label>
-                        <textarea name="cp${i}" id="cp${i}" class="form-control" rows="3" required minlength="50" maxlength="2000" oninput="updateCharCounter('cp${i}', 'counter_cp${i}')">${caseAnswers[`cp${i}`] || ''}</textarea>
-                        <div id="counter_cp${i}" class="char-counter"></div>
-                    </div>`).join('')}
-                </div>
-
-                <div class="form-actions"><button type="submit" class="btn btn--primary">Enviar Evaluación</button></div>
-            </form>
-        </div>
-        <div id="examResultContainer" style="display:none;"></div>
-        <div id="examResultActions" class="form-actions" style="display:none; justify-content: center; margin-top: 20px;">
-            <button id="retryExamBtn" class="btn btn--primary">Reintentar Evaluación</button>
-        </div>`;
-
-    caseStudy.preguntas.forEach((_, i) => updateCharCounter(`cp${i}`, `counter_cp${i}`));
-    
-    document.getElementById('examForm').addEventListener('submit', submitFn);
-    document.getElementById('retryExamBtn').addEventListener('click', () => {
-         renderEvaluationContent(document.getElementById('step5Content'), submitFn);
-    });
-}
-
-async function submitExam(e) {
-    e.preventDefault();
-    const form = e.target;
-    const submitButton = form.querySelector('button[type="submit"]');
-
-    setButtonLoading(submitButton, true, 'Enviando...');
-    
-    const formData = new FormData(form);
-    const userAnswers = { mc: {}, case: {} };
-    let score = 0;
-    
-    appData.evaluacion.preguntas.forEach((q, i) => {
-        const userAnswer = parseInt(formData.get(`q${i}`));
-        userAnswers.mc[i] = userAnswer;
-        if (userAnswer === q.correcta) score++;
-    });
-    appData.evaluacion.caso_practico.preguntas.forEach((cp, i) => userAnswers.case[`cp${i}`] = formData.get(`cp${i}`));
-    
-    const progress = participantProgress[currentUser.dni];
-    const newIntentos = (progress.eval_intentos || 0) + 1;
-    const passed = score >= appData.configuracion.nota_minima_aprobacion;
-    
-    const attemptData = { 
-        dni: currentUser.dni, 
-        timestamp: new Date().toISOString(), 
-        score, 
-        answers_json: JSON.stringify(userAnswers) 
-    };
-    const response = await postDataToGoogleSheet('saveExamAttempt', attemptData);
-
-    progress.eval_intentos = newIntentos;
-    progress.eval_aprobado = progress.eval_aprobado || passed;
-    progress.step5_completed = progress.step5_completed || passed;
-    progress.last_case_answers = userAnswers.case;
-    if (passed && response.certificate_code) {
-        progress.certificate_code = response.certificate_code;
-        progress.final_score = score;
-    }
-
-    await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: progress });
-    
-    document.getElementById('examContainer').style.display = 'none';
-    
-    const resultContainer = document.getElementById('examResultContainer');
-    resultContainer.style.display = 'block';
-    resultContainer.innerHTML = appData.evaluacion.preguntas.map((q, i) => {
-        const isCorrect = userAnswers.mc[i] === q.correcta;
-        return `
-        <div class="question-item ${isCorrect ? 'correct' : 'incorrect'}">
-            <p class="question-text">${i + 1}. ${q.texto}</p>
-            <div class="question-options">
-            ${q.opciones.map((opt, j) => {
-                let className = 'option-item';
-                if (j === q.correcta) className += ' correct-answer';
-                if (j === userAnswers.mc[i] && !isCorrect) className += ' incorrect';
-                return `<div class="${className}"><span>${opt}</span></div>`;
-            }).join('')}
-            </div>
-        </div>`;
-    }).join('');
-
-    if (passed) {
-        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${response.certificate_code}</strong><br>Podrás descargarlo en las próximas horas.`, () => {
-            updateCertificationSteps();
-        });
-    } else {
-        const remaining = appData.configuracion.max_intentos_evaluacion - newIntentos;
-        let message = `Tu puntaje es ${score}/${appData.evaluacion.preguntas.length}. Te quedan ${remaining} intentos.`;
-        if (remaining > 0) {
-            message += "<br><br><b>Haz clic en el botón 'Reintentar Evaluación' para hacerlo una vez más.</b>";
-            document.getElementById('examResultActions').style.display = 'flex';
-        } else {
-            message += "<br><br><b>Has agotado todos tus intentos.</b>";
-        }
-        showModal('Intento Registrado', message);
-    }
-}
-
-async function postDataToGoogleSheet(action, data) {
-    try {
-        const response = await fetch(googleAppScriptUrl, {
-            method: 'POST',
-            mode: 'cors',
-            credentials: 'omit',
-            body: JSON.stringify({ action, data })
-        });
-        if (!response.ok) throw new Error('Network response was not ok.');
-        return await response.json();
-    } catch (error) {
-        console.error('Error posting data:', error);
-        return { status: 'error', message: error.message };
-    }
-}
-async function updateUserProgress(key, value) {
-    if (!currentUser) return;
-    if (!participantProgress[currentUser.dni]) {
-        participantProgress[currentUser.dni] = createDefaultProgress(currentUser.dni);
-    }
-    participantProgress[currentUser.dni][key] = value;
-    await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: participantProgress[currentUser.dni] });
-    updateCertificationSteps();
-}
-function buildControlUnificado() {
-    const map = new Map();
-    const processList = (list) => {
-        if (!Array.isArray(list)) return;
-        list.forEach(p => {
-            if (p.dni) {
-                const dniStr = p.dni.toString();
-                if (!map.has(dniStr)) {
-                    map.set(dniStr, { ...p, dni: dniStr, nombre_completo: `${p.nombres || ''} ${p.apellidos || ''}`.trim() });
-                }
-            }
-        });
-    };
-    processList(appData.matriculados);
-    processList(appData.nuevos_registros);
-    controlUnificado = Array.from(map.values());
-}
-
-function initializeAllProgress() {
-    controlUnificado.forEach(p => {
-        let progressData = createDefaultProgress(p.dni);
-        const existingProgressRow = appData.progreso.find(prog => prog.dni?.toString() === p.dni?.toString());
-        if (existingProgressRow) {
-            if (existingProgressRow.datos_progreso) {
-                try {
-                    const savedProgress = JSON.parse(existingProgressRow.datos_progreso);
-                    progressData = { ...progressData, ...savedProgress };
-                } catch (e) { console.warn(`Could not parse progress JSON for DNI ${p.dni}.`); }
-            }
-            if (existingProgressRow.estado_evaluacion === 'Aprobado') {
-                progressData.eval_aprobado = true;
-                progressData.step5_completed = true;
-            }
-            if (existingProgressRow.codigo_certificado) {
-                progressData.certificate_code = existingProgressRow.codigo_certificado;
-            }
-        }
-        participantProgress[p.dni] = progressData;
-    });
-}
-
-function createDefaultProgress(dni) {
-    const dniStr = dni.toString();
-    const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dniStr);
-    const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dniStr);
-    return {
-        step1_completed: isAsistenteS1, step2_completed: false,
-        step3_completed: isAsistenteS2, step4_completed: false,
-        step5_completed: false, eval_intentos: 0,
-        eval_aprobado: false, comments: {}, final_score: null,
-        certificate_code: null, last_case_answers: {}
-    };
-}
-
-function updateCharCounter(textAreaId, counterId) {
-    const textArea = document.getElementById(textAreaId);
-    const counter = document.getElementById(counterId);
-    if (textArea && counter) {
-        const maxLength = textArea.maxLength;
-        const currentLength = textArea.value.length;
-        counter.textContent = `${currentLength} / ${maxLength} caracteres`;
-    }
-}
-function setButtonLoading(button, isLoading, loadingText = 'Cargando...') {
-    if (!button) return;
-    if (isLoading) {
-        if (!button.originalHTML) button.originalHTML = button.innerHTML;
-        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
-        button.disabled = true;
-    } else {
-        if (button.originalHTML) button.innerHTML = button.originalHTML;
-        button.disabled = false;
-    }
-}
-function isStepCompleted(step) { return participantProgress[currentUser.dni]?.[`${step}_completed`]; }
-function handleLogout() { currentUser = null; showSection('loginSection'); }
-function updateStudentInfo() { document.getElementById('studentName').textContent = currentUser.nombre_completo; document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`; }
-
-function updateCertificateSection() { 
-    const section = document.getElementById('certificateSection');
-    const progress = participantProgress[currentUser.dni];
-    
-    if (progress && progress.certificate_code) {
-        const config = appData.configuracion;
-        const certCode = progress.certificate_code;
-        
-        const studentData = `\n- Nombre: ${currentUser.nombre_completo}\n- DNI: ${currentUser.dni}\n- Correo: ${currentUser.email || 'No especificado'}`;
-        const text = encodeURIComponent(`Hola, deseo solicitar mi certificado físico. Mis datos son:${studentData}\nMi código de certificado es ${certCode}. Adjunto mi comprobante de pago.`);
-        const contactNumber = config.whatsapp_contact_number || '51982197128';
-
-        section.innerHTML = `
-            <div class="certificate-card">
-                <h4><i class="fas fa-certificate"></i> ¡Certificación Completada!</h4>
-                <p>Su código de certificado es: <strong>${certCode}</strong></p>
-                <p>Su Certificado Digital Gratuito estará disponible para descarga en las próximas horas. Recibirá una notificación por correo y/o WhatsApp.</p>
-                <a href="${config.certificate_verification_link || '#'}" target="_blank" class="btn btn--success" style="margin-top: 10px;">
-                    <i class="fas fa-check-circle"></i> Verificar Certificado en la Web
-                </a>
-
-                <div class="promo-section">
-                    <h5>Opcional: Potencie su CV con el <strong>Certificado Físico con Triple Firma</strong></h5>
-                    <p>Por una inversión de promoción de <strong>S/${config.cert_fisico_precio || '40.00'}</strong>, asegure su certificado impreso con el respaldo de la Cámara de Comercio de Huánuco y el Colegio de Sociólogos del Perú.</p>
-                    <p><strong>¿Cómo solicitarlo?</strong><br>
-                    1. Realice el pago vía Yape al <strong>${config.yape_number || '994694751'}</strong> (Edunova Peru Sac).<br>
-                    2. Notifique su pago enviando el comprobante por WhatsApp.</p>
-                    <a href="https://wa.me/${contactNumber}?text=${text}" target="_blank" class="btn btn--primary" style="margin-top: 10px;">
-                        <i class="fab fa-whatsapp"></i> <strong>Solicitar Certificado Físico por WhatsApp</strong>
-                    </a>
-                </div>
-            </div>`;
-        section.style.display = 'block'; 
-    } else { 
-        section.style.display = 'none'; 
-    } 
-}
-
-function showSpinner(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
-function setupModalControls() { const m = document.getElementById('messageModal'); document.getElementById('modalConfirm').onclick = () => m.classList.add('hidden'); document.getElementById('closeModal').onclick = () => m.classList.add('hidden'); }
-function showError(id, msg) { const e = document.getElementById(id); if (e) { e.querySelector('span').textContent = msg; e.style.display = 'block'; } }
-function showModal(title, message, callback) {
-    const modal = document.getElementById('messageModal');
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalMessage').innerHTML = message;
-    modal.classList.remove('hidden');
-    document.getElementById('modalConfirm').onclick = () => {
-        modal.classList.add('hidden');
-        if (callback) callback();
-    };
-}
-function initializeSystemData() {
-    buildControlUnificado();
-    initializeAllProgress();
-
-    const whatsappBtn = document.getElementById('whatsappGroupBtn');
-    if (whatsappBtn && appData.configuracion.whatsapp_group_link) {
-        whatsappBtn.href = appData.configuracion.whatsapp_group_link;
-        // no cambiamos display aquí porque ya lo controla showSection()
-    }
-
-
-    
-    // ---------- Nuevo: cargar link dinámico de Políticas de Privacidad ----------
-const privacyLinkEl = document.getElementById('privacyPolicyLink');
-
-const privacyLink = (appData.configuracion && appData.configuracion.privacy_policy_link)
-    ? appData.configuracion.privacy_policy_link
-    : 'https://edunova.edu.pe/privacy-policy/';
-
-if (privacyLinkEl) {
-    privacyLinkEl.href = privacyLink;
-}
-
-
 

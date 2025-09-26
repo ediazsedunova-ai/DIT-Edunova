@@ -44,10 +44,6 @@ async function loadDataFromGoogleSheet() {
 function initializeSystemData() {
     buildControlUnificado();
     initializeAllProgress();
-    const whatsappBtn = document.getElementById('whatsappGroupBtn');
-    if (appData.configuracion.whatsapp_group_link) {
-        whatsappBtn.href = appData.configuracion.whatsapp_group_link;
-    }
 }
 
 function setupEventListeners() {
@@ -66,11 +62,11 @@ function showSection(sectionName) {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
-    document.getElementById('whatsappGroupBtn').style.display = (sectionName === 'certificationSteps' || sectionName === 'adminPanel') ? 'inline-flex' : 'none';
     const target = document.getElementById(sectionName);
     if (target) target.style.display = 'block';
 }
 
+// --- LOGIN, REGISTRATION & ADMIN ACCESS ---
 function handleLogin(e) { 
     e.preventDefault(); 
     const dni = document.getElementById('dniInput').value.trim();
@@ -78,6 +74,7 @@ function handleLogin(e) {
         showError('loginError', 'DNI inválido. Debe contener 8 dígitos.');
         return;
     }
+    // Consistent string comparison
     const participant = controlUnificado.find(u => u.dni && u.dni.toString() === dni);
     if (participant) {
         currentUser = participant;
@@ -145,34 +142,25 @@ async function handleRegistro(e) {
 function requestAccess(type) {
     const passwordModal = document.getElementById('passwordModal');
     document.getElementById('passwordTitle').textContent = `Acceso de ${type === 'admin' ? 'Administrador' : 'Editor'}`;
-    const passwordInput = document.getElementById('passwordInput');
-    passwordInput.value = '';
-    document.getElementById('passwordError').style.display = 'none';
     passwordModal.classList.remove('hidden');
-    passwordInput.focus();
     
     const form = document.getElementById('passwordForm');
-    const submitBtn = document.getElementById('passwordSubmit');
-    
-    const submitHandler = (e) => {
-      e.preventDefault();
-      const password = passwordInput.value;
-      const correctPassword = appData.configuracion.credenciales[`${type}_password`];
-      if (password === correctPassword) {
-          passwordModal.classList.add('hidden');
-          showAdminPanel();
-      } else {
-          document.getElementById('passwordError').style.display = 'block';
-      }
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        const password = document.getElementById('passwordInput').value;
+        const correctPassword = appData.configuracion.credenciales[`${type}_password`];
+        if (password === correctPassword) {
+            passwordModal.classList.add('hidden');
+            document.getElementById('passwordInput').value = '';
+            showAdminPanel();
+        } else {
+            document.getElementById('passwordError').style.display = 'block';
+        }
     };
-
-    form.onsubmit = submitHandler;
-    submitBtn.onclick = submitHandler;
     document.getElementById('passwordCancel').onclick = () => passwordModal.classList.add('hidden');
-    document.getElementById('closePasswordModal').onclick = () => passwordModal.classList.add('hidden');
-
 }
 
+// --- ADMIN PANEL ---
 function showAdminPanel() {
     const approvedCount = controlUnificado.filter(p => participantProgress[p.dni]?.eval_aprobado).length;
     const certificatesGenerated = controlUnificado.filter(p => participantProgress[p.dni]?.certificate_code).length;
@@ -227,6 +215,7 @@ function exportProgressToCsv() {
     document.body.removeChild(link);
 }
 
+// --- CERTIFICATION STEPS & VALIDATION ---
 function updateCertificationSteps() {
     if (!currentUser) return;
     updateStudentInfo();
@@ -272,7 +261,7 @@ function renderStep1Content(container, submitFn) {
     container.innerHTML = `<p>Vea la grabación y escriba la palabra clave para validar.</p>
     <a href="${appData.configuracion.enlaces_grabaciones.sesion1}" target="_blank" class="btn btn--secondary">Ver Video Sesión 1</a>
     <form id="session1Form" class="form-group">
-        <input id="session1Code" class="form-control" placeholder="Palabra Clave Sesión 1" required style="margin-top:1rem;" maxlength="50">
+        <input id="session1Code" class="form-control" placeholder="Palabra Clave Sesión 1" required style="margin-top:1rem;">
         <div class="form-actions" style="justify-content: flex-start;"><button type="submit" class="btn btn--primary">Validar</button></div>
     </form>`;
     document.getElementById('session1Form').addEventListener('submit', submitFn);
@@ -340,7 +329,7 @@ function renderStep3Content(container, submitFn) {
      container.innerHTML = `<p>Vea la grabación y escriba la palabra clave para validar.</p>
     <a href="${appData.configuracion.enlaces_grabaciones.sesion2}" target="_blank" class="btn btn--secondary">Ver Video Sesión 2</a>
     <form id="session2Form" class="form-group">
-        <input id="session2Code" class="form-control" placeholder="Palabra Clave Sesión 2" required style="margin-top:1rem;" maxlength="50">
+        <input id="session2Code" class="form-control" placeholder="Palabra Clave Sesión 2" required style="margin-top:1rem;">
         <div class="form-actions" style="justify-content: flex-start;"><button type="submit" class="btn btn--primary">Validar</button></div>
     </form>`;
     document.getElementById('session2Form').addEventListener('submit', submitFn);
@@ -446,6 +435,7 @@ async function submitExam(e) {
     };
     const response = await postDataToGoogleSheet('saveExamAttempt', attemptData);
 
+    // Update local progress data first for immediate UI feedback
     progress.eval_intentos = newIntentos;
     progress.eval_aprobado = progress.eval_aprobado || passed;
     progress.step5_completed = progress.step5_completed || passed;
@@ -455,6 +445,7 @@ async function submitExam(e) {
         progress.final_score = score;
     }
 
+    // Now, send the final complete progress object to be saved.
     await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: progress });
     
     document.getElementById('examContainer').style.display = 'none';
@@ -478,8 +469,8 @@ async function submitExam(e) {
     }).join('');
 
     if (passed) {
-        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${response.certificate_code}</strong><br>Podrás descargarlo en las próximas horas.`, () => {
-            updateCertificationSteps();
+        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${response.certificate_code}</strong><br>Podrás descargarlo en las próximas horas en el siguiente enlace: <a href="https://edunova.edu.pe/verify/" target="_blank">edunova.edu.pe/verify/</a>`, () => {
+            updateCertificationSteps(); // This will refresh the entire view
         });
     } else {
         const remaining = appData.configuracion.max_intentos_evaluacion - newIntentos;
@@ -494,6 +485,7 @@ async function submitExam(e) {
     }
 }
 
+// --- DATA & UTILITIES ---
 async function postDataToGoogleSheet(action, data) {
     try {
         const response = await fetch(googleAppScriptUrl, {
@@ -520,6 +512,7 @@ async function updateUserProgress(key, value) {
 }
 function buildControlUnificado() {
     const map = new Map();
+    // Ensure all DNI are strings for consistent matching
     const processList = (list) => {
         if (!Array.isArray(list)) return;
         list.forEach(p => {
@@ -536,30 +529,45 @@ function buildControlUnificado() {
     controlUnificado = Array.from(map.values());
 }
 
+
 function initializeAllProgress() {
     controlUnificado.forEach(p => {
+        // Start with a clean, default progress state.
         let progressData = createDefaultProgress(p.dni);
+
         const existingProgressRow = appData.progreso.find(prog => prog.dni?.toString() === p.dni?.toString());
+
         if (existingProgressRow) {
+            // First, try to load the detailed state (comments, etc.) from the JSON blob.
             if (existingProgressRow.datos_progreso) {
                 try {
                     const savedProgress = JSON.parse(existingProgressRow.datos_progreso);
+                    // Merge the saved data into our default object.
                     progressData = { ...progressData, ...savedProgress };
-                } catch (e) { console.warn(`Could not parse progress JSON for DNI ${p.dni}.`); }
+                } catch (e) {
+                    console.warn(`Could not parse progress JSON for DNI ${p.dni}.`);
+                }
             }
+
+            // CRITICAL: Now, override with the definitive status from individual columns.
+            // This ensures the main status is always correct, even if the JSON is outdated or corrupt.
             if (existingProgressRow.estado_evaluacion === 'Aprobado') {
                 progressData.eval_aprobado = true;
                 progressData.step5_completed = true;
             }
+
             if (existingProgressRow.codigo_certificado) {
                 progressData.certificate_code = existingProgressRow.codigo_certificado;
             }
         }
+        
         participantProgress[p.dni] = progressData;
     });
 }
 
+
 function createDefaultProgress(dni) {
+    // Ensure DNI is a string
     const dniStr = dni.toString();
     const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dniStr);
     const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dniStr);
@@ -572,6 +580,7 @@ function createDefaultProgress(dni) {
     };
 }
 
+
 function updateCharCounter(textAreaId, counterId) {
     const textArea = document.getElementById(textAreaId);
     const counter = document.getElementById(counterId);
@@ -581,59 +590,32 @@ function updateCharCounter(textAreaId, counterId) {
         counter.textContent = `${currentLength} / ${maxLength} caracteres`;
     }
 }
-function setButtonLoading(button, isLoading, loadingText = 'Cargando...') {
+function setButtonLoading(button, isLoading, loadingText = 'Cargando...', defaultText) {
     if (!button) return;
     if (isLoading) {
-        if (!button.originalHTML) button.originalHTML = button.innerHTML;
+        if (!button.originalHTML) {
+            button.originalHTML = button.innerHTML;
+        }
         button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
         button.disabled = true;
     } else {
-        if (button.originalHTML) button.innerHTML = button.originalHTML;
+        button.innerHTML = defaultText || button.originalHTML || 'Acción';
         button.disabled = false;
     }
 }
 function isStepCompleted(step) { return participantProgress[currentUser.dni]?.[`${step}_completed`]; }
 function handleLogout() { currentUser = null; showSection('loginSection'); }
 function updateStudentInfo() { document.getElementById('studentName').textContent = currentUser.nombre_completo; document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`; }
-
 function updateCertificateSection() { 
-    const section = document.getElementById('certificateSection');
-    const progress = participantProgress[currentUser.dni];
-    
-    if (progress && progress.certificate_code) {
-        const config = appData.configuracion;
-        const certCode = progress.certificate_code;
-        
-        const studentData = `\n- Nombre: ${currentUser.nombre_completo}\n- DNI: ${currentUser.dni}\n- Correo: ${currentUser.email || 'No especificado'}`;
-        const text = encodeURIComponent(`Hola, deseo solicitar mi certificado físico. Mis datos son:${studentData}\nMi código de certificado es ${certCode}. Adjunto mi comprobante de pago.`);
-        const contactNumber = config.whatsapp_contact_number || '51982197128';
-
-        section.innerHTML = `
-            <div class="certificate-card">
-                <h4><i class="fas fa-certificate"></i> ¡Certificación Completada!</h4>
-                <p>Su código de certificado es: <strong>${certCode}</strong></p>
-                <p>Su Certificado Digital Gratuito estará disponible para descarga en las próximas horas. Recibirá una notificación por correo y/o WhatsApp.</p>
-                <a href="${config.certificate_verification_link || '#'}" target="_blank" class="btn btn--success" style="margin-top: 10px;">
-                    <i class="fas fa-check-circle"></i> Verificar Certificado en la Web
-                </a>
-
-                <div class="promo-section">
-                    <h5>Opcional: Potencie su CV con el <strong>Certificado Físico con Triple Firma</strong></h5>
-                    <p>Por una inversión de promoción de <strong>S/${config.cert_fisico_precio || '40.00'}</strong>, asegure su certificado impreso con el respaldo de la Cámara de Comercio de Huánuco y el Colegio de Sociólogos del Perú.</p>
-                    <p><strong>¿Cómo solicitarlo?</strong><br>
-                    1. Realice el pago vía Yape al <strong>${config.yape_number || '994694751'}</strong> (Edunova Peru Sac).<br>
-                    2. Notifique su pago enviando el comprobante por WhatsApp.</p>
-                    <a href="https://wa.me/${contactNumber}?text=${text}" target="_blank" class="btn btn--primary" style="margin-top: 10px;">
-                        <i class="fab fa-whatsapp"></i> <strong>Solicitar Certificado Físico por WhatsApp</strong>
-                    </a>
-                </div>
-            </div>`;
-        section.style.display = 'block'; 
+    const s = document.getElementById('certificateSection'); 
+    const p = participantProgress[currentUser.dni]; 
+    if (p && p.certificate_code) { 
+        document.getElementById('certificateCode').textContent = p.certificate_code; 
+        s.style.display = 'block'; 
     } else { 
-        section.style.display = 'none'; 
+        s.style.display = 'none'; 
     } 
 }
-
 function showSpinner(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
 function setupModalControls() { const m = document.getElementById('messageModal'); document.getElementById('modalConfirm').onclick = () => m.classList.add('hidden'); document.getElementById('closeModal').onclick = () => m.classList.add('hidden'); }
 function showError(id, msg) { const e = document.getElementById(id); if (e) { e.querySelector('span').textContent = msg; e.style.display = 'block'; } }

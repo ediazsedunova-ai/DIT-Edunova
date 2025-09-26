@@ -663,25 +663,18 @@ function initializeSystemData() {
         // no cambiamos display aquí porque ya lo controla showSection()
     }
 
+
+    
     // ---------- Nuevo: cargar link dinámico de Políticas de Privacidad ----------
-    const privacyTextEl = document.getElementById('privacyPolicyText');
-    const privacyBtnEl = document.getElementById('privacyPolicyLinkBtn');
+const privacyLinkEl = document.getElementById('privacyPolicyLink');
 
-    // Tomamos el enlace desde la hoja o usamos uno por defecto si no existe
-    const privacyLink = (appData.configuracion && appData.configuracion.privacy_policy_link)
-                        ? appData.configuracion.privacy_policy_link
-                        : 'https://edunova.edu.pe/privacy-policy/';
+const privacyLink = (appData.configuracion && appData.configuracion.privacy_policy_link)
+    ? appData.configuracion.privacy_policy_link
+    : 'https://edunova.edu.pe/privacy-policy/';
 
-    if (privacyTextEl) {
-        // Inserta texto con ancla (si quieres mantener solo texto plano, cámbialo)
-        privacyTextEl.innerHTML = `Acepto las <a href="${privacyLink}" target="_blank">Políticas de Privacidad de Edunova Perú</a>.`;
-    }
-
-    if (privacyBtnEl) {
-        privacyBtnEl.href = privacyLink;
-        privacyBtnEl.style.display = 'inline-flex'; // mostrar el botón "Ver"
-    }
-    // -------------------------------------------------------------------------
+if (privacyLinkEl) {
+    privacyLinkEl.href = privacyLink;
 }
+
 
 

@@ -653,4 +653,35 @@ function showModal(title, message, callback) {
         if (callback) callback();
     };
 }
+function initializeSystemData() {
+    buildControlUnificado();
+    initializeAllProgress();
+
+    const whatsappBtn = document.getElementById('whatsappGroupBtn');
+    if (whatsappBtn && appData.configuracion.whatsapp_group_link) {
+        whatsappBtn.href = appData.configuracion.whatsapp_group_link;
+        // no cambiamos display aquí porque ya lo controla showSection()
+    }
+
+    // ---------- Nuevo: cargar link dinámico de Políticas de Privacidad ----------
+    const privacyTextEl = document.getElementById('privacyPolicyText');
+    const privacyBtnEl = document.getElementById('privacyPolicyLinkBtn');
+
+    // Tomamos el enlace desde la hoja o usamos uno por defecto si no existe
+    const privacyLink = (appData.configuracion && appData.configuracion.privacy_policy_link)
+                        ? appData.configuracion.privacy_policy_link
+                        : 'https://edunova.edu.pe/privacy-policy/';
+
+    if (privacyTextEl) {
+        // Inserta texto con ancla (si quieres mantener solo texto plano, cámbialo)
+        privacyTextEl.innerHTML = `Acepto las <a href="${privacyLink}" target="_blank">Políticas de Privacidad de Edunova Perú</a>.`;
+    }
+
+    if (privacyBtnEl) {
+        privacyBtnEl.href = privacyLink;
+        privacyBtnEl.style.display = 'inline-flex'; // mostrar el botón "Ver"
+    }
+    // -------------------------------------------------------------------------
+}
+
 

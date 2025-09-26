@@ -107,6 +107,12 @@ function showRegistroForm(dni) {
 
 async function handleRegistro(e) {
     e.preventDefault();
+    
+    if (!document.getElementById('regPrivacidad').checked) {
+        showModal('Aceptación Requerida', 'Debe aceptar las políticas de privacidad para continuar.');
+        return;
+    }
+
     const registerButton = e.target.querySelector('button[type="submit"]');
     setButtonLoading(registerButton, true, 'Registrando...');
 

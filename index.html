@@ -4,143 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EDUNOVA - Portal DIT Definitivo</title>
+    <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        /* INICIO DE ESTILOS CSS INTEGRADOS */
-        :root {
-          /* Primitive Color Tokens */
-          --color-white: rgba(255, 255, 255, 1);
-          --color-black: rgba(0, 0, 0, 1);
-          --color-background: #f8f9fa;
-          --color-surface: #ffffff;
-          --color-text: #212529;
-          --color-text-secondary: #6c757d;
-          --color-border: #dee2e6;
-          --color-primary: #007bff;
-          --color-primary-hover: #0056b3;
-          --color-success: #28a745;
-          --color-error: #dc3545;
-          --color-warning: #ffc107;
-          --color-whatsapp: #25D366;
-
-          /* Sizing & Spacing */
-          --space-4: 4px; --space-8: 8px; --space-12: 12px; --space-16: 16px;
-          --space-20: 20px; --space-24: 24px; --space-32: 32px;
-
-          /* Appearance */
-          --radius-sm: 4px; --radius-base: 6px; --radius-lg: 8px;
-          --shadow-sm: 0 1px 3px rgba(0,0,0,.1);
-          --shadow-base: 0 4px 6px rgba(0,0,0,.1);
-        }
-
-        /* --- Global Resets & Typography --- */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--color-background);
-            color: var(--color-text);
-            line-height: 1.6;
-        }
-        .container { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 var(--space-16); }
-        h1, h2, h3, h4, h5 { margin-bottom: var(--space-12); line-height: 1.2; }
-        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; } h3 { font-size: 1.75rem; } h4 { font-size: 1.25rem; }
-        p { margin-bottom: var(--space-16); }
-        a { color: var(--color-primary); text-decoration: none; }
-        a:hover { text-decoration: underline; }
-
-        /* --- Header --- */
-        .header { background: var(--color-surface); padding: var(--space-16) 0; border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-32); }
-        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .logo { display: flex; align-items: center; gap: var(--space-12); font-size: 1.5rem; }
-        .course-title { text-align: center; flex-grow: 1; }
-        .course-title h2 { margin-bottom: 0; }
-        .course-title p { font-size: 0.9rem; color: var(--color-text-secondary); margin: 0; }
-        .header-actions { display: flex; gap: var(--space-12); }
-
-        /* --- Buttons --- */
-        .btn { display: inline-flex; align-items: center; gap: var(--space-8); padding: var(--space-12) var(--space-20); border: none; border-radius: var(--radius-base); font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none !important; }
-        .btn:hover { text-decoration: none !important; }
-        .btn--primary { background: var(--color-primary); color: var(--color-white); }
-        .btn--primary:hover { background: var(--color-primary-hover); }
-        .btn--secondary { background: var(--color-text-secondary); color: var(--color-white); }
-        .btn--outline { background: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
-        .btn--outline:hover { background: var(--color-background); }
-        .btn--whatsapp { background-color: var(--color-whatsapp); color: var(--color-white); }
-        .btn--block { width: 100%; justify-content: center; }
-        .btn--sm { padding: var(--space-8) var(--space-12); font-size: 0.875rem; }
-        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
-
-        /* --- Cards & Forms --- */
-        .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin-bottom: var(--space-24); box-shadow: var(--shadow-sm); }
-        .card-header { padding: var(--space-16) var(--space-20); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-header h3 { margin: 0; } .card-header p { margin: 0; font-size: 0.9rem; color: var(--color-text-secondary); }
-        .card-body { padding: var(--space-20); }
-        .form-group { margin-bottom: var(--space-20); }
-        .form-group label { display: block; margin-bottom: var(--space-8); font-weight: 500; }
-        .input-icon { position: relative; }
-        .input-icon i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-secondary); }
-        .form-control { width: 100%; padding: var(--space-12); border: 1px solid var(--color-border); border-radius: var(--radius-base); font-size: 1rem; }
-        .input-icon .form-control { padding-left: 36px; }
-        .error-message { color: var(--color-error); font-size: 0.875rem; margin-top: var(--space-8); }
-
-        /* --- Dashboard Specifics --- */
-        .user-info p { margin: 0; }
-        .progress-summary { margin-bottom: var(--space-24); }
-        .progress-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-16); text-align: center; }
-        .progress-step { background: #f1f1f1; padding: var(--space-16); border-radius: var(--radius-lg); transition: all 0.3s; }
-        .progress-step i { font-size: 2rem; margin-bottom: var(--space-8); display: block; color: var(--color-text-secondary); }
-        .progress-step span { display: block; font-weight: 500; }
-        .status-badge { font-size: 0.8rem; padding: 2px 6px; border-radius: 10px; margin-top: var(--space-8); }
-        .status-badge.pending { background: #e9ecef; color: #495057; }
-        .status-badge.completed { background: #d4edda; color: #155724; }
-        .progress-step.completed { background: #e2f5ea; }
-        .progress-step.completed i { color: var(--color-success); }
-        .section-divider { border-bottom: 1px solid var(--color-border); margin: var(--space-24) 0; }
-
-        /* --- Tabs --- */
-        .tabs { display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-24); }
-        .tab-link { background: none; border: none; padding: var(--space-12) var(--space-20); cursor: pointer; font-size: 1rem; color: var(--color-text-secondary); border-bottom: 3px solid transparent; }
-        .tab-link:hover { background: #f8f9fa; }
-        .tab-link.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: bold; }
-        .tab-link:disabled { color: #ccc; cursor: not-allowed; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* --- Session & Evaluation Content --- */
-        .session-block { margin-bottom: var(--space-32); }
-        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #000; margin-bottom: var(--space-16); }
-        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        .alert { padding: var(--space-16); border-radius: var(--radius-base); margin: var(--space-16) 0; }
-        .alert-success { background-color: #d4edda; color: #155724; }
-        .alert-danger { background-color: #f8d7da; color: #721c24; }
-        .alert-info { background-color: #cce5ff; color: #004085; }
-        .options-group label { display: block; margin-bottom: var(--space-8); }
-
-        /* --- Certificate --- */
-        .certificate-display { text-align: center; padding: var(--space-24); background: #f8f9fa; border-radius: var(--radius-lg); }
-        .cert-icon { font-size: 4rem; color: var(--color-success); margin-bottom: var(--space-16); }
-        .certificate-code { background: #e9ecef; color: var(--color-primary); font-size: 1.5rem; font-weight: bold; padding: var(--space-8) var(--space-16); border-radius: var(--radius-sm); display: inline-block; margin: var(--space-16) 0; }
-
-        /* --- Admin Table --- */
-        .admin-actions { display: flex; gap: var(--space-16); margin-bottom: var(--space-16); align-items: center; }
-        .table-container { overflow-x: auto; }
-        .data-table { width: 100%; border-collapse: collapse; }
-        .data-table th, .data-table td { padding: var(--space-12); border: 1px solid var(--color-border); text-align: left; font-size: 0.9rem; }
-        .data-table thead { background: var(--color-background); }
-
-        /* --- Utility & Components --- */
-        #loadingSpinner { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); align-items: center; justify-content: center; z-index: 2000; }
-        .spinner { border: 8px solid #f3f3f3; border-top: 8px solid var(--color-primary); border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1050; }
-        .modal.hidden { display: none; }
-        .modal-content { background: var(--color-surface); border-radius: var(--radius-lg); max-width: 500px; width: 90%; }
-        .modal-header { padding: var(--space-16); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: var(--space-20); }
-        .modal-footer { padding: var(--space-12) var(--space-20); text-align: right; border-top: 1px solid var(--color-border); }
-        .char-counter { font-size: 0.75rem; text-align: right; color: var(--color-text-secondary); }
-        /* FIN DE ESTILOS CSS INTEGRADOS */
-    </style>
 </head>
 <body>
     <!-- Full screen loading spinner -->
@@ -160,176 +25,151 @@
                     <p>Portal de Certificación DIT - Completo</p>
                 </div>
                 <div class="header-actions">
-                     <a href="https://chat.whatsapp.com/GR3ywZLbt6DD7qIfZZ5eTq" id="whatsappGroupBtn" class="btn btn--whatsapp btn--sm" target="_blank" style="display: none;">
+                     <a id="whatsappGroupBtn" class="btn btn--whatsapp btn--sm" target="_blank" style="display: none;">
                         <i class="fab fa-whatsapp"></i> Únete a la Comunidad
                     </a>
                     <button id="adminBtn" class="btn btn--outline btn--sm">
-                        <i class="fas fa-user-shield"></i> Admin
+                        <i class="fas fa-shield-alt"></i> Admin
                     </button>
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="container">
-        <!-- Todas las secciones de la aplicación -->
-        <div id="app">
-            <!-- Sección de Login/Búsqueda de DNI -->
-            <section id="loginSection" class="card">
-                <div class="card-header">
-                    <h3>Consulta tu Progreso</h3>
-                    <p>Ingresa tu número de DNI para ver tu avance y certificación.</p>
-                </div>
-                <div class="card-body">
-                    <form id="loginForm">
-                        <div class="form-group">
-                            <label for="dniInput">Número de DNI</label>
-                            <div class="input-icon">
-                                <i class="fas fa-id-card"></i>
-                                <input type="text" id="dniInput" class="form-control" placeholder="Ej: 12345678" required pattern="\d{8,}" title="El DNI debe tener al menos 8 dígitos.">
+    <main class="main">
+        <div class="container">
+            <!-- Login Section -->
+            <section id="loginSection" class="section">
+                 <div class="card welcome-card">
+                    <div class="card__body">
+                        <h3><i class="fas fa-sign-in-alt"></i> Acceso al Portal DIT</h3>
+                        <p>Ingrese su DNI para acceder al proceso de certificación.</p>
+                        <form id="loginForm" class="form">
+                            <div class="form-group">
+                                <label for="dniInput" class="form-label">DNI:</label>
+                                <input type="text" id="dniInput" class="form-control" placeholder="Ingrese su DNI (8 dígitos)" maxlength="8" pattern="[0-9]{8}" required>
                             </div>
-                            <div id="loginError" class="error-message" style="display: none;">
-                                <span></span>
-                            </div>
+                            <button type="submit" class="btn btn--primary btn--full-width">
+                                <i class="fas fa-arrow-right"></i> Ingresar al Sistema
+                            </button>
+                        </form>
+                        <div id="loginError" class="error-message" style="display: none;">
+                            <i class="fas fa-exclamation-circle"></i> <span id="errorText">Error desconocido</span>
                         </div>
-                        <button type="submit" class="btn btn--primary btn--block">
-                            <i class="fas fa-search"></i> Consultar
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </section>
 
-            <!-- Sección del Panel de Usuario -->
-            <section id="dashboardSection" style="display: none;" class="card">
-                <div class="card-header">
-                    <div class="user-info">
-                        <h3 id="welcomeMessage"></h3>
-                        <p>DNI: <span id="userDNI"></span></p>
+            <!-- Registration Section -->
+            <section id="registroSection" class="section" style="display: none;">
+                <div class="card">
+                    <div class="card__body">
+                        <h3><i class="fas fa-user-plus"></i> Registro Nuevo Participante</h3>
+                        <p>Su DNI no se encuentra en nuestra base de datos. Complete el registro para continuar.</p>
+                        <form id="registroForm" class="form">
+                            <div class="form-group">
+                                <label class="form-label">DNI:</label>
+                                <input type="text" id="regDni" class="form-control" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nombres:</label>
+                                <input type="text" id="regNombres" class="form-control" placeholder="Ingrese sus nombres" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Apellidos:</label>
+                                <input type="text" id="regApellidos" class="form-control" placeholder="Ingrese sus apellidos" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Celular (WhatsApp):</label>
+                                <input type="tel" id="regCelular" class="form-control" placeholder="Ej: 987654321" maxlength="9" pattern="[0-9]*">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Correo Electrónico:</label>
+                                <input type="email" id="regEmail" class="form-control" placeholder="ejemplo@correo.com" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Lugar de Residencia:</label>
+                                <input type="text" id="regResidencia" class="form-control" placeholder="Ciudad, Departamento" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Opción de Certificado:</label>
+                                <div id="certificateOptionsContainer" class="certificado-options">
+                                    <!-- Options loaded dynamically -->
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" id="backToLogin" class="btn btn--secondary">Cancelar</button>
+                                <button type="submit" class="btn btn--primary">Completar Registro</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Certification Steps -->
+            <section id="certificationSteps" class="section" style="display: none;">
+                <div class="dashboard-header">
+                    <div class="student-info">
+                        <h3 id="studentName"></h3>
+                        <p id="studentDni"></p>
                     </div>
                     <button id="logoutBtn" class="btn btn--secondary btn--sm">
                         <i class="fas fa-sign-out-alt"></i> Salir
                     </button>
                 </div>
-                <div class="card-body">
-                    <div class="progress-summary">
-                        <h4>Resumen de tu Avance</h4>
-                        <div class="progress-grid">
-                            <div id="step1" class="progress-step">
-                                <i class="fas fa-video"></i>
-                                <span>Sesión 1</span>
-                                <span class="status-badge"></span>
-                            </div>
-                            <div id="step2" class="progress-step">
-                                <i class="fas fa-video"></i>
-                                <span>Sesión 2</span>
-                                <span class="status-badge"></span>
-                            </div>
-                            <div id="step3" class="progress-step">
-                                <i class="fas fa-tasks"></i>
-                                <span>Evaluación</span>
-                                <span class="status-badge"></span>
-                            </div>
-                            <div id="step4" class="progress-step">
-                                <i class="fas fa-award"></i>
-                                <span>Certificado</span>
-                                <span class="status-badge"></span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="section-divider"></div>
 
-                    <!-- Pestañas de Navegación -->
-                    <div class="tabs">
-                        <button class="tab-link active" data-tab="tab-clases">
-                            <i class="fas fa-chalkboard-teacher"></i> Clases Grabadas
-                        </button>
-                        <button class="tab-link" data-tab="tab-evaluacion">
-                            <i class="fas fa-file-alt"></i> Evaluación Final
-                        </button>
-                        <button class="tab-link" data-tab="tab-certificado" disabled>
-                            <i class="fas fa-certificate"></i> Mi Certificado
-                        </button>
-                    </div>
-
-                    <!-- Contenido de las Pestañas -->
-                    <div id="tab-clases" class="tab-content active">
-                        <div class="session-block">
-                            <h4>Sesión 1: Fundamentos y Contexto</h4>
-                             <div class="video-container"><iframe id="video1" width="560" height="315" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
-                            <form id="session1Form" class="session-form">
-                                <div class="form-group">
-                                    <label>Ingresa la clave de la Sesión 1 para marcarla como vista:</label>
-                                    <input type="text" id="session1Key" class="form-control" placeholder="Clave de la sesión">
-                                     <div id="session1Error" class="error-message" style="display: none;"><span></span></div>
-                                </div>
-                                <button type="submit" class="btn btn--primary">Marcar como Visto</button>
-                            </form>
+                <div class="card progress-card">
+                    <div class="card__body">
+                        <h4><i class="fas fa-list-ol"></i> Proceso de Certificación DIT</h4>
+                        <div class="steps-container">
+                            <div id="step1" class="step-item"><div class="step-header"><div class="step-number">1</div><div class="step-title">Validación Sesión 1</div><div class="step-status" id="step1Status"></div></div><div class="step-actions" id="step1Actions" style="display:none;"><div id="step1Content"></div></div></div>
+                            <div id="step2" class="step-item"><div class="step-header"><div class="step-number">2</div><div class="step-title">Lectura Módulo 1</div><div class="step-status" id="step2Status"></div></div><div class="step-actions" id="step2Actions" style="display:none;"><div id="step2Content"></div></div></div>
+                            <div id="step3" class="step-item"><div class="step-header"><div class="step-number">3</div><div class="step-title">Validación Sesión 2</div><div class="step-status" id="step3Status"></div></div><div class="step-actions" id="step3Actions" style="display:none;"><div id="step3Content"></div></div></div>
+                            <div id="step4" class="step-item"><div class="step-header"><div class="step-number">4</div><div class="step-title">Lectura Módulo 2</div><div class="step-status" id="step4Status"></div></div><div class="step-actions" id="step4Actions" style="display:none;"><div id="step4Content"></div></div></div>
+                            <div id="step5" class="step-item"><div class="step-header"><div class="step-number">5</div><div class="step-title">Evaluación Final</div><div class="step-status" id="step5Status"></div></div><div class="step-actions" id="step5Actions" style="display:none;"><div id="step5Content"></div></div></div>
                         </div>
-                        <div class="session-block">
-                            <h4>Sesión 2: Diseño e Innovación</h4>
-                             <div class="video-container"><iframe id="video2" width="560" height="315" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
-                            <form id="session2Form" class="session-form">
-                                <div class="form-group">
-                                    <label>Ingresa la clave de la Sesión 2 para marcarla como vista:</label>
-                                    <input type="text" id="session2Key" class="form-control" placeholder="Clave de la sesión">
-                                     <div id="session2Error" class="error-message" style="display: none;"><span></span></div>
-                                </div>
-                                <button type="submit" class="btn btn--primary">Marcar como Visto</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div id="tab-evaluacion" class="tab-content">
-                        <div id="evaluationInfo">
-                            <p>Completa las dos sesiones para desbloquear la evaluación.</p>
-                        </div>
-                        <div id="evaluationContent" style="display:none;">
-                            <p><strong>Nota Mínima para Aprobar:</strong> <span id="minScore"></span> de 10.</p>
-                            <p><strong>Intentos Restantes:</strong> <span id="attemptsLeft"></span>.</p>
-                             <div id="evaluationMessage" class="alert" style="display:none;"></div>
-                            <button id="startEvaluationBtn" class="btn btn--primary">Iniciar Evaluación</button>
-                        </div>
-                        <div id="evaluationFormContainer" style="display:none;"></div>
-                    </div>
-
-                    <div id="tab-certificado" class="tab-content">
-                       <div id="certificateInfo">
-                         <!-- El contenido se genera dinámicamente con JS -->
-                       </div>
+                         <div id="certificateSection" class="certificate-section" style="display: none;">
+                            <!-- Content is generated dynamically by app.js -->
+                         </div>
                     </div>
                 </div>
             </section>
-            
-            <!-- Sección del Panel de Administrador -->
-            <section id="adminSection" style="display: none;" class="card">
-                 <div class="card-header">
-                    <h3>Panel de Administrador</h3>
-                    <button id="adminLogoutBtn" class="btn btn--secondary btn--sm"><i class="fas fa-sign-out-alt"></i> Salir</button>
+
+            <!-- Admin Panel -->
+            <section id="adminPanel" class="section" style="display: none;">
+                 <div class="dashboard-header">
+                    <h3><i class="fas fa-shield-alt"></i> Panel Administrativo</h3>
+                    <button id="backToLoginAdmin" class="btn btn--secondary btn--sm">
+                        <i class="fas fa-sign-out-alt"></i> Salir
+                    </button>
                 </div>
-                <div class="card-body">
-                    <div class="admin-actions">
-                        <button id="syncDataBtn" class="btn btn--primary"><i class="fas fa-sync-alt"></i> Sincronizar Datos</button>
-                        <input type="text" id="adminSearchDNI" class="form-control" placeholder="Buscar por DNI o Nombre...">
-                    </div>
-                    <div class="table-container">
-                        <table id="progressTable" class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>N°</th>
-                                    <th>DNI</th>
-                                    <th>Nombres y Apellidos</th>
-                                    <th>Celular</th>
-                                    <th>Certificado</th>
-                                    <th>Paso 1</th>
-                                    <th>Paso 2</th>
-                                    <th>Paso 3</th>
-                                    <th>Paso 4</th>
-                                    <th>Paso 5</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                 <div class="stats-grid">
+                    <div class="card stat-card"><div class="card__body"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><h4 id="totalParticipants">0</h4><p>Total</p></div></div></div>
+                    <div class="card stat-card"><div class="card__body"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h4 id="approvedCount">0</h4><p>Aprobados</p></div></div></div>
+                    <div class="card stat-card"><div class="card__body"><div class="stat-icon"><i class="fas fa-certificate"></i></div><div class="stat-info"><h4 id="certificatesGenerated">0</h4><p>Certificados</p></div></div></div>
+                </div>
+                 <div class="card">
+                    <div class="card__body">
+                        <div class="table-header">
+                            <h4>Progreso de Participantes</h4>
+                            <button id="exportCsvBtn" class="btn btn--success btn--sm"><i class="fas fa-file-csv"></i> Exportar a CSV</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="progressTable" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>DNI</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Paso 1</th>
+                                        <th>Paso 2</th>
+                                        <th>Paso 3</th>
+                                        <th>Paso 4</th>
+                                        <th>Paso 5</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -339,524 +179,7 @@
     <div id="messageModal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h4 id="modalTitle"></h4><button class="modal-close" id="closeModal"><i class="fas fa-times"></i></button></div><div class="modal-body"><div id="modalMessage"></div></div><div class="modal-footer"><button id="modalConfirm" class="btn btn--primary">OK</button></div></div></div>
     <div id="passwordModal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h4 id="passwordTitle"></h4><button class="modal-close" id="closePasswordModal"><i class="fas fa-times"></i></button></div><div class="modal-body"><form id="passwordForm"><div class="form-group"><label>Contraseña:</label><input type="password" id="passwordInput" class="form-control" required></div><div id="passwordError" class="error-message" style="display:none;">Contraseña incorrecta</div></form></div><div class="modal-footer"><button type="button" id="passwordCancel" class="btn btn--secondary">Cancelar</button><button type="button" id="passwordSubmit" class="btn btn--primary">Ingresar</button></div></div></div>
 
-    <script>
-        // INICIO DE JAVASCRIPT INTEGRADO
-        // -----------------------------------------------------------------------------
-        // CONFIGURACIÓN PRINCIPAL - ¡IMPORTANTE!
-        // -----------------------------------------------------------------------------
-        // Pega la URL de tu Google Apps Script implementado aquí.
-        const googleAppScriptUrl = 'https://script.google.com/macros/s/AKfycbwuuJERNMU7ZrCrftQIzxn_dlIe4lzXh-SiseYAQzlwCWf6m9OUZ4fxlxe3Ubx0jGW7Hw/exec';
-        // -----------------------------------------------------------------------------
-
-        // Global application state
-        let appData = {};
-        let currentUser = null;
-        let participantProgress = {};
-        let controlUnificado = [];
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🚀 Initializing DIT System...');
-            showSpinner(true);
-            await loadDataFromGoogleSheet();
-            showSpinner(false);
-
-            if (googleAppScriptUrl.includes('PEGAR_AQUÍ')) {
-                showModal('Error de Configuración', 'La aplicación no está conectada. Por favor, edita este archivo y añade la URL de tu Google Apps Script.');
-                return;
-            }
-
-            setupEventListeners();
-            showSection('loginSection');
-        });
-
-        async function loadDataFromGoogleSheet() {
-            try {
-                const response = await fetch(googleAppScriptUrl);
-                if (!response.ok) throw new Error(`Error de red: ${response.status}.`);
-                const data = await response.json();
-                if (data.status === 'error') throw new Error(data.message);
-                appData = data;
-                console.log('✅ Data loaded successfully:', appData);
-                const whatsappBtn = document.getElementById('whatsappGroupBtn');
-                if (appData.config.whatsapp_link && whatsappBtn) {
-                    whatsappBtn.href = appData.config.whatsapp_link;
-                    whatsappBtn.style.display = 'inline-flex';
-                }
-            } catch (error) {
-                console.error('❌ Failed to load data:', error);
-                showModal('Error de Carga', `No se pudo conectar con la base de datos. Por favor, intenta de nuevo más tarde. Detalle: ${error.message}`);
-            }
-        }
-
-        function setupEventListeners() {
-            document.getElementById('loginForm').addEventListener('submit', handleLogin);
-            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-            document.getElementById('adminBtn').addEventListener('click', () => showPasswordModal('admin'));
-            document.getElementById('adminLogoutBtn').addEventListener('click', handleLogout);
-            document.getElementById('syncDataBtn').addEventListener('click', async () => {
-                showSpinner(true);
-                await loadDataFromGoogleSheet();
-                updateProgressTable();
-                showSpinner(false);
-                showModal('Sincronizado', 'Los datos han sido actualizados correctamente.');
-            });
-
-            document.querySelectorAll('.tab-link').forEach(button => {
-                button.addEventListener('click', () => {
-                    const tabId = button.dataset.tab;
-                    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-                    document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
-                    document.getElementById(tabId).classList.add('active');
-                    button.classList.add('active');
-                });
-            });
-
-            document.getElementById('session1Form').addEventListener('submit', (e) => handleSessionComplete(e, 'sesion1'));
-            document.getElementById('session2Form').addEventListener('submit', (e) => handleSessionComplete(e, 'sesion2'));
-            
-            document.getElementById('adminSearchDNI').addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                filterAdminTable(searchTerm);
-            });
-
-            setupModalControls();
-            setupPasswordModalControls();
-        }
-
-        function showSection(sectionId) {
-            document.querySelectorAll('main section').forEach(section => {
-                section.style.display = 'none';
-            });
-            const sectionToShow = document.getElementById(sectionId);
-            if(sectionToShow) {
-                sectionToShow.style.display = 'block';
-            }
-        }
-
-        function handleLogin(event) {
-            event.preventDefault();
-            const dni = document.getElementById('dniInput').value.trim();
-            const user = appData.matriculados.find(p => p.dni.toString() === dni);
-
-            if (user) {
-                currentUser = user;
-                participantProgress = appData.progreso.find(p => p.dni.toString() === dni) || { dni, datos_progreso: '{}', intentos: 0, nota_final: null, estado_evaluacion: 'Pendiente', codigo_certificado: null };
-                try {
-                   participantProgress.datos_progreso = JSON.parse(participantProgress.datos_progreso || '{}');
-                } catch(e) {
-                   participantProgress.datos_progreso = {};
-                }
-
-                console.log('👤 User logged in:', currentUser, participantProgress);
-                document.getElementById('loginError').style.display = 'none';
-                showSection('dashboardSection');
-                renderDashboard();
-            } else {
-                showError('loginError', 'DNI no encontrado. Verifica el número o regístrate.');
-            }
-        }
-
-        function handleLogout() {
-            currentUser = null;
-            participantProgress = {};
-            document.getElementById('loginForm').reset();
-            showSection('loginSection');
-            console.log('Logged out.');
-        }
-
-        function renderDashboard() {
-            document.getElementById('welcomeMessage').textContent = `Bienvenido(a), ${currentUser.nombres} ${currentUser.apellidos}`;
-            document.getElementById('userDNI').textContent = currentUser.dni;
-            
-            document.getElementById('video1').src = appData.config.sesion1_video.replace("watch?v=", "embed/");
-            document.getElementById('video2').src = appData.config.sesion2_video.replace("watch?v=", "embed/");
-
-            updateProgressSteps();
-            updateEvaluationTab();
-            updateCertificateTab();
-        }
-
-        function updateProgressSteps() {
-            const progress = participantProgress.datos_progreso || {};
-            const evalStatus = participantProgress.estado_evaluacion;
-            
-            updateStep('step1', progress.sesion1);
-            updateStep('step2', progress.sesion2);
-            
-            let evalCompleted = evalStatus === 'Aprobado';
-            updateStep('step3', evalCompleted);
-
-            let certGenerated = !!participantProgress.codigo_certificado;
-            updateStep('step4', certGenerated);
-        }
-
-        function updateStep(stepId, completed) {
-            const step = document.getElementById(stepId);
-            const statusBadge = step.querySelector('.status-badge');
-            if (completed) {
-                step.classList.add('completed');
-                statusBadge.textContent = 'Completado';
-                statusBadge.className = 'status-badge completed';
-            } else {
-                step.classList.remove('completed');
-                statusBadge.textContent = 'Pendiente';
-                statusBadge.className = 'status-badge pending';
-            }
-        }
-
-        function updateEvaluationTab() {
-            const progress = participantProgress.datos_progreso || {};
-            const evalInfo = document.getElementById('evaluationInfo');
-            const evalContent = document.getElementById('evaluationContent');
-            const evalFormContainer = document.getElementById('evaluationFormContainer');
-
-            if (progress.sesion1 && progress.sesion2) {
-                evalInfo.style.display = 'none';
-                evalContent.style.display = 'block';
-                
-                const maxAttempts = parseInt(appData.config.max_intentos_evaluacion, 10);
-                const currentAttempts = parseInt(participantProgress.intentos || 0, 10);
-                const attemptsLeft = maxAttempts - currentAttempts;
-
-                document.getElementById('minScore').textContent = appData.config.nota_minima_aprobacion;
-                document.getElementById('attemptsLeft').textContent = attemptsLeft;
-                
-                const evalMsg = document.getElementById('evaluationMessage');
-                const startBtn = document.getElementById('startEvaluationBtn');
-                evalFormContainer.style.display = 'none';
-
-                if (participantProgress.estado_evaluacion === 'Aprobado') {
-                    evalMsg.textContent = `¡Felicidades! Has aprobado la evaluación con una nota de ${participantProgress.nota_final}.`;
-                    evalMsg.className = 'alert alert-success';
-                    evalMsg.style.display = 'block';
-                    startBtn.style.display = 'none';
-                } else if (attemptsLeft <= 0) {
-                    evalMsg.textContent = 'Has agotado todos tus intentos para la evaluación.';
-                    evalMsg.className = 'alert alert-danger';
-                    evalMsg.style.display = 'block';
-                    startBtn.style.display = 'none';
-                } else {
-                    evalMsg.style.display = 'none';
-                    startBtn.style.display = 'block';
-                    startBtn.onclick = startEvaluation;
-                }
-
-            } else {
-                evalInfo.style.display = 'block';
-                evalContent.style.display = 'none';
-            }
-        }
-
-        function startEvaluation() {
-            document.getElementById('evaluationContent').style.display = 'none';
-            const formContainer = document.getElementById('evaluationFormContainer');
-            formContainer.style.display = 'block';
-            formContainer.innerHTML = '';
-            
-            const form = document.createElement('form');
-            form.id = 'evaluationForm';
-            
-            appData.evaluacion.multipleChoice.forEach((q, index) => {
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'form-group';
-                questionDiv.innerHTML = `
-                    <label>${index + 1}. ${q.texto}</label>
-                    <div class="options-group">
-                        <label><input type="radio" name="mc_${q.id_pregunta}" value="A" required> ${q.opcion_a}</label>
-                        <label><input type="radio" name="mc_${q.id_pregunta}" value="B" required> ${q.opcion_b}</label>
-                    </div>`;
-                form.appendChild(questionDiv);
-            });
-
-            const caseTitle = document.createElement('h4');
-            caseTitle.textContent = appData.evaluacion.caseStudy.titulo;
-            form.appendChild(caseTitle);
-
-            const caseDesc = document.createElement('p');
-            caseDesc.innerHTML = `<em>${appData.evaluacion.caseStudy.descripcion}</em>`;
-            form.appendChild(caseDesc);
-            
-            appData.evaluacion.caseStudy.questions.forEach((q, index) => {
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'form-group';
-                questionDiv.innerHTML = `
-                    <label>${index + 1 + appData.evaluacion.multipleChoice.length}. ${q.texto}</label>
-                    <textarea name="case_${index}" class="form-control" rows="4" required maxlength="500"></textarea>
-                    <div class="char-counter">0/500</div>
-                `;
-                form.appendChild(questionDiv);
-            });
-
-            const submitBtn = document.createElement('button');
-            submitBtn.type = 'submit';
-            submitBtn.className = 'btn btn--primary';
-            submitBtn.textContent = 'Enviar Evaluación';
-            form.appendChild(submitBtn);
-
-            formContainer.appendChild(form);
-            
-            form.addEventListener('submit', handleEvaluationSubmit);
-            form.querySelectorAll('textarea').forEach(textarea => {
-                textarea.addEventListener('input', (e) => {
-                    const counter = e.target.nextElementSibling;
-                    const length = e.target.value.length;
-                    counter.textContent = `${length}/500`;
-                    if (length > 500) {
-                      counter.style.color = 'var(--color-error)';
-                    } else {
-                      counter.style.color = 'var(--color-text-secondary)';
-                    }
-                });
-            });
-        }
-
-        async function handleEvaluationSubmit(event) {
-            event.preventDefault();
-            showSpinner(true);
-
-            const formData = new FormData(event.target);
-            const answers = {};
-            for (let [key, value] of formData.entries()) {
-                answers[key] = value;
-            }
-
-            try {
-                await fetch(googleAppScriptUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'submitEvaluation',
-                        dni: currentUser.dni,
-                        answers: answers
-                    }),
-                    headers: { 'Content-Type': 'application/json' },
-                     mode: 'no-cors'
-                });
-
-                showModal('Evaluación Enviada', 'Tu evaluación ha sido enviada para su calificación. Los resultados se actualizarán en breve. Por favor, vuelve a consultar tu DNI en unos minutos.');
-
-                await loadDataFromGoogleSheet();
-                participantProgress = appData.progreso.find(p => p.dni.toString() === currentUser.dni) || participantProgress;
-                 try {
-                   participantProgress.datos_progreso = JSON.parse(participantProgress.datos_progreso || '{}');
-                } catch(e) {
-                   participantProgress.datos_progreso = {};
-                }
-                renderDashboard();
-                
-            } catch (error) {
-                console.error('Error submitting evaluation:', error);
-                showModal('Error', 'Hubo un problema al enviar tu evaluación. Por favor, inténtalo de nuevo.');
-            } finally {
-                showSpinner(false);
-            }
-        }
-
-        async function handleSessionComplete(event, sessionKey) {
-            event.preventDefault();
-            const inputId = `${sessionKey}Key`;
-            const errorId = `${sessionKey}Error`;
-            const key = document.getElementById(inputId).value.trim();
-            const correctKey = appData.config[`${sessionKey}_clave`];
-
-            if (key === correctKey) {
-                showSpinner(true);
-                document.getElementById(errorId).style.display = 'none';
-
-                try {
-                    await fetch(googleAppScriptUrl, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'updateProgress', dni: currentUser.dni, step: sessionKey }),
-                        headers: { 'Content-Type': 'application/json' },
-                        mode: 'no-cors'
-                    });
-
-                    await loadDataFromGoogleSheet();
-                    participantProgress = appData.progreso.find(p => p.dni.toString() === currentUser.dni) || participantProgress;
-                    try {
-                       participantProgress.datos_progreso = JSON.parse(participantProgress.datos_progreso || '{}');
-                    } catch(e) {
-                       participantProgress.datos_progreso = {};
-                    }
-
-                    renderDashboard();
-                    showModal('¡Éxito!', `La ${sessionKey === 'sesion1' ? 'Sesión 1' : 'Sesión 2'} ha sido marcada como completada.`);
-
-                } catch (error) {
-                    console.error(`Error updating ${sessionKey}:`, error);
-                    showModal('Error', 'No se pudo actualizar tu progreso. Inténtalo de nuevo.');
-                } finally {
-                    showSpinner(false);
-                }
-            } else {
-                showError(errorId, 'Clave incorrecta. Inténtalo de nuevo.');
-            }
-        }
-
-        function updateCertificateTab() {
-            const certTab = document.querySelector('.tab-link[data-tab="tab-certificado"]');
-            const certInfo = document.getElementById('certificateInfo');
-            
-            if (participantProgress.estado_evaluacion === 'Aprobado' && participantProgress.codigo_certificado) {
-                certTab.disabled = false;
-                const userCertType = currentUser.certificado;
-                const certConfig = userCertType.includes('DIGITAL') ? appData.config.cert_digital : appData.config.cert_fisico;
-                const contactInfo = appData.config.cert_fisico_contacto || "";
-                const [contactName, contactNumber] = contactInfo.split('-').map(s => s.trim());
-                const text = encodeURIComponent(`Hola ${contactName}, mi nombre es ${currentUser.nombres} ${currentUser.apellidos} con DNI ${currentUser.dni}. He aprobado el curso DIT y deseo coordinar la entrega de mi certificado físico. Código de Certificado: ${participantProgress.codigo_certificado}.`);
-
-                let physicalCertHtml = '';
-                if (userCertType.includes('FÍSICO')) {
-                   physicalCertHtml = `
-                        <div class="physical-cert-instructions" style="margin-top: 20px;">
-                            <div class="alert alert-info">
-                                <h5>Pasos para obtener tu Certificado Físico:</h5>
-                                <p>1. Realiza el pago de <strong>${certConfig.costo}</strong> a través de Yape, Plin o transferencia bancaria al <strong>${contactNumber}</strong> (Edunova Peru Sac).<br>
-                                2. Notifique su pago enviando el comprobante por WhatsApp.</p>
-                                <a href="https://wa.me/${contactNumber}?text=${text}" target="_blank" class="btn btn--primary" style="margin-top: 10px;">
-                                    <i class="fab fa-whatsapp"></i> <strong>Solicitar Certificado Físico por WhatsApp</strong>
-                                </a>
-                            </div>
-                        </div>`;
-                }
-
-                certInfo.innerHTML = `
-                    <div class="certificate-display">
-                        <div class="cert-icon"><i class="fas fa-award"></i></div>
-                        <h4>¡Felicidades, ${currentUser.nombres}!</h4>
-                        <p>Has completado exitosamente el curso de Desarrollo Infantil Temprano.</p>
-                        <p><strong>Tu código de certificado único es:</strong></p>
-                        <div class="certificate-code">${participantProgress.codigo_certificado}</div>
-                        <p><strong>Horas de Certificación:</strong> ${appData.config.horas_certificacion} horas académicas.</p>
-                        <hr>
-                        <h5>Detalles de tu Certificado</h5>
-                        <p><strong>Tipo:</strong> ${certConfig.nombre}</p>
-                        <p><strong>Costo:</strong> ${certConfig.costo}</p>
-                        <p><em>${certConfig.desc}</em></p>
-                        <!-- BOTÓN DE VERIFICAR MOVIDO AQUÍ -->
-                        <a href="https://edunova.edu.pe/verify/" target="_blank" class="btn btn--outline" style="margin-top: 20px;">
-                            <i class="fas fa-check-circle"></i> Verificar mi Certificado
-                        </a>
-                    </div>
-                    ${physicalCertHtml}
-                `;
-
-            } else {
-                certTab.disabled = true;
-                certInfo.innerHTML = '<p>Debes aprobar la evaluación final para poder ver la información de tu certificado.</p>';
-            }
-        }
-
-        function showPasswordModal(type) {
-            const modal = document.getElementById('passwordModal');
-            const title = document.getElementById('passwordTitle');
-            title.textContent = type === 'admin' ? 'Acceso de Administrador' : 'Acceso de Editor';
-            modal.dataset.type = type;
-            modal.classList.remove('hidden');
-            document.getElementById('passwordInput').focus();
-        }
-
-        function setupPasswordModalControls() {
-            const modal = document.getElementById('passwordModal');
-            const form = document.getElementById('passwordForm');
-            const cancelBtn = document.getElementById('passwordCancel');
-            const submitBtn = document.getElementById('passwordSubmit');
-            const closeBtn = document.getElementById('closePasswordModal');
-            
-            const closeModal = () => {
-                modal.classList.add('hidden');
-                form.reset();
-                document.getElementById('passwordError').style.display = 'none';
-            };
-
-            cancelBtn.onclick = closeModal;
-            closeBtn.onclick = closeModal;
-            submitBtn.onclick = () => form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const password = document.getElementById('passwordInput').value;
-                const type = modal.dataset.type;
-                const correctPassword = appData.config[`${type}_password`];
-                
-                if (password === correctPassword) {
-                    closeModal();
-                    if (type === 'admin') {
-                        showSection('adminSection');
-                        buildAndShowAdminTable();
-                    }
-                } else {
-                    document.getElementById('passwordError').style.display = 'block';
-                }
-            });
-        }
-
-        function buildAndShowAdminTable() {
-            controlUnificado = appData.matriculados.map(matriculado => {
-                const progreso = appData.progreso.find(p => p.dni === matriculado.dni) || {};
-                const progresoData = typeof progreso.datos_progreso === 'string' && progreso.datos_progreso ? JSON.parse(progreso.datos_progreso) : (progreso.datos_progreso || {});
-                
-                const asistS1 = appData.asistentesS1.some(a => a.dni === matriculado.dni);
-                const asistS2 = appData.asistentesS2.some(a => a.dni === matriculado.dni);
-
-                return {
-                    ...matriculado,
-                    progreso: progresoData,
-                    estado_evaluacion: progreso.estado_evaluacion || 'Pendiente',
-                    codigo_certificado: progreso.codigo_certificado,
-                    asistS1,
-                    asistS2
-                };
-            });
-            updateProgressTable();
-        }
-
-        function updateProgressTable(filteredData = null) {
-            const dataToRender = filteredData || controlUnificado;
-            const tableBody = document.getElementById('progressTable').querySelector('tbody');
-            tableBody.innerHTML = '';
-            
-            dataToRender.forEach((user, index) => {
-                const row = tableBody.insertRow();
-                const evalAprobada = user.estado_evaluacion === 'Aprobado';
-
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${user.dni}</td>
-                    <td>${user.nombres} ${user.apellidos}</td>
-                    <td>${user.celular}</td>
-                    <td>${user.certificado.includes('FÍSICO') ? 'Físico' : 'Digital'}</td>
-                    <td>${user.asistS1 ? '✅' : '❌'}</td>
-                    <td>${user.asistS2 ? '✅' : '❌'}</td>
-                    <td>${user.progreso.sesion1 ? '✅' : '❌'}</td>
-                    <td>${user.progreso.sesion2 ? '✅' : '❌'}</td>
-                    <td>${evalAprobada ? `✅ (${user.estado_evaluacion})` : '❌'}</td>
-                `;
-            });
-        }
-
-        function filterAdminTable(searchTerm) {
-            const filtered = controlUnificado.filter(user => 
-                user.dni.toString().includes(searchTerm) || 
-                `${user.nombres} ${user.apellidos}`.toLowerCase().includes(searchTerm)
-            );
-            updateProgressTable(filtered);
-        }
-
-        function showSpinner(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
-        function setupModalControls() { const m = document.getElementById('messageModal'); document.getElementById('modalConfirm').onclick = () => m.classList.add('hidden'); document.getElementById('closeModal').onclick = () => m.classList.add('hidden'); }
-        function showError(id, msg) { const e = document.getElementById(id); if (e) { e.querySelector('span').textContent = msg; e.style.display = 'block'; } }
-        function showModal(title, message, callback) {
-            const modal = document.getElementById('messageModal');
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalMessage').innerHTML = message;
-            modal.classList.remove('hidden');
-            document.getElementById('modalConfirm').onclick = () => {
-                modal.classList.add('hidden');
-                if (callback) callback();
-            };
-        }
-        // FIN DE JAVASCRIPT INTEGRADO
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
 

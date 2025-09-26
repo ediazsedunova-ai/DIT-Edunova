@@ -37,7 +37,7 @@ async function loadDataFromGoogleSheet() {
         initializeSystemData();
     } catch (error) {
         console.error('❌ Failed to load data:', error);
-        showModal('Error Crítico de Carga', `No se pudieron cargar los datos.<br><br><b>Mensaje:</b> ${error.message}<br><br>Revisa la consola (F12) y los registros en Apps Script.`);
+        showModal('Error Crítico de Carga', `No se pudieron cargar los datos desde Google Sheets.<br><br><b>Mensaje del Servidor:</b><br><i>${error.message}</i><br><br><b>Posibles Soluciones:</b><br>1. Verifica que la URL en <code>app.js</code> es correcta.<br>2. Revisa que todas las pestañas en tu Google Sheet tengan el nombre exacto pedido en las instrucciones.<br>3. Asegúrate de haber implementado el script para que "Cualquier usuario" tenga acceso.`);
     }
 }
 
@@ -74,6 +74,7 @@ function handleLogin(e) {
         showError('loginError', 'DNI inválido. Debe contener 8 dígitos.');
         return;
     }
+    // Consistent string comparison
     const participant = controlUnificado.find(u => u.dni && u.dni.toString() === dni);
     if (participant) {
         currentUser = participant;
@@ -103,7 +104,9 @@ function showRegistroForm(dni) {
 
 async function handleRegistro(e) {
     e.preventDefault();
-    showSpinner(true);
+    const registerButton = e.target.querySelector('button[type="submit"]');
+    setButtonLoading(registerButton, true, 'Registrando...');
+
     const formData = {
         dni: document.getElementById('regDni').value,
         nombres: document.getElementById('regNombres').value,
@@ -118,19 +121,19 @@ async function handleRegistro(e) {
     const response = await postDataToGoogleSheet('registerUser', formData);
     
     if (response.status === 'success') {
-        const newUser = { ...formData, nombre_completo: `${formData.nombres} ${formData.apellidos}` };
+        const newUser = { ...formData, nombre_completo: `${formData.nombres} ${formData.apellidos}`, dni: formData.dni.toString() };
         appData.nuevos_registros.push(newUser);
         controlUnificado.push(newUser);
         participantProgress[newUser.dni] = response.newProgress;
         currentUser = newUser;
         
-        showSpinner(false);
+        setButtonLoading(registerButton, false, 'Completar Registro');
         showModal('Registro Exitoso', `¡Bienvenido(a) ${formData.nombres}!<br>Tu registro ha sido completado.`, () => {
              updateCertificationSteps();
              showSection('certificationSteps');
         });
     } else {
-        showSpinner(false);
+        setButtonLoading(registerButton, false, 'Completar Registro');
         showModal('Error de Registro', response.message);
     }
 }
@@ -171,7 +174,7 @@ function showAdminPanel() {
         const progress = participantProgress[p.dni] || {};
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${p.dni}</td>
+            <td>'${p.dni}</td>
             <td>${p.nombre_completo}</td>
             <td>${getStatusBadge(progress.step1_completed)}</td>
             <td>${getStatusBadge(progress.step2_completed)}</td>
@@ -195,7 +198,7 @@ function exportProgressToCsv() {
     controlUnificado.forEach(p => {
         const progress = participantProgress[p.dni] || {};
         const row = [
-            p.dni, `"${p.nombre_completo}"`,
+            `'${p.dni}`, `"${p.nombre_completo}"`,
             progress.step1_completed ? 'SI' : 'NO', progress.step2_completed ? 'SI' : 'NO',
             progress.step3_completed ? 'SI' : 'NO', progress.step4_completed ? 'SI' : 'NO',
             progress.step5_completed ? 'SI' : 'NO', progress.eval_aprobado ? 'SI' : 'NO',
@@ -265,10 +268,13 @@ function renderStep1Content(container, submitFn) {
 }
 async function validateSession1(e) {
     e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, 'Validando...');
     if (document.getElementById('session1Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion1.toUpperCase()) {
         await updateUserProgress('step1_completed', true);
     } else {
         showModal('Error', 'Palabra clave incorrecta.');
+        setButtonLoading(button, false, 'Validar');
     }
 }
 
@@ -282,7 +288,11 @@ function renderModuleContent(container, moduleIndex) {
                 <p>${tema.resumen}</p>
                 <a href="${tema.lectura_url}" target="_blank" class="btn btn--secondary btn--sm">Leer artículo completo</a>
                 <div class="comment-form form-group">
-                    <textarea class="form-control" id="comment_${tema.id}" placeholder="Escriba su reflexión aquí (mínimo 50 caracteres)...">${progress.comments?.[tema.id] || ''}</textarea>
+                    <textarea class="form-control" id="comment_${tema.id}" 
+                              placeholder="Escriba su reflexión aquí (mínimo 50 caracteres)..." 
+                              maxlength="2000" 
+                              oninput="updateCharCounter('comment_${tema.id}', 'counter_${tema.id}')">${progress.comments?.[tema.id] || ''}</textarea>
+                    <div id="counter_${tema.id}" class="char-counter"></div>
                 </div>
             </div>
         `).join('')}
@@ -290,7 +300,12 @@ function renderModuleContent(container, moduleIndex) {
             <button id="completeModuleBtn_${moduleIndex}" class="btn btn--primary">Guardar y Completar Módulo</button>
         </div>
     `;
-    document.getElementById(`completeModuleBtn_${moduleIndex}`).onclick = async () => {
+    
+    module.temas.forEach(tema => updateCharCounter(`comment_${tema.id}`, `counter_${tema.id}`));
+
+    const completeBtn = document.getElementById(`completeModuleBtn_${moduleIndex}`);
+    completeBtn.onclick = async () => {
+        setButtonLoading(completeBtn, true, 'Guardando...');
         let allValid = true;
         if (!progress.comments) progress.comments = {};
         module.temas.forEach(tema => {
@@ -305,6 +320,7 @@ function renderModuleContent(container, moduleIndex) {
             await updateUserProgress(stepKey, true);
         } else {
             showModal('Incompleto', 'Debe escribir una reflexión de al menos 50 caracteres para cada tema.');
+            setButtonLoading(completeBtn, false, 'Guardar y Completar Módulo');
         }
     };
 }
@@ -320,21 +336,30 @@ function renderStep3Content(container, submitFn) {
 }
 async function validateSession2(e) {
     e.preventDefault();
+    const button = e.target.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, 'Validando...');
     if (document.getElementById('session2Code').value.trim().toUpperCase() === appData.configuracion.palabras_clave.sesion2.toUpperCase()) {
         await updateUserProgress('step3_completed', true);
     } else {
         showModal('Error', 'Palabra clave incorrecta.');
+        setButtonLoading(button, false, 'Validar');
     }
 }
 
 function renderEvaluationContent(container, submitFn) {
     const progress = participantProgress[currentUser.dni];
+    
+    if (progress.eval_aprobado) {
+        container.innerHTML = `<div class="success-message">Ya has completado y aprobado esta evaluación.</div>`;
+        return;
+    }
+
     const remaining = appData.configuracion.max_intentos_evaluacion - (progress.eval_intentos || 0);
     const caseAnswers = progress.last_case_answers || {};
     const caseStudy = appData.evaluacion.caso_practico;
 
-    if (remaining <= 0 && !progress.eval_aprobado) {
-        container.innerHTML = `<div class="error-message">Has agotado tus intentos.</div>`;
+    if (remaining <= 0) {
+        container.innerHTML = `<div class="error-message">Has agotado todos tus intentos para la evaluación.</div>`;
         return;
     }
 
@@ -359,26 +384,34 @@ function renderEvaluationContent(container, submitFn) {
                     ${caseStudy.preguntas.map((cp, i) => `
                     <div class="form-group">
                         <label class="form-label"><strong>${i + 1}.</strong> ${cp}</label>
-                        <textarea name="cp${i}" class="form-control" rows="3" required minlength="50">${caseAnswers[`cp${i}`] || ''}</textarea>
+                        <textarea name="cp${i}" id="cp${i}" class="form-control" rows="3" required minlength="50" maxlength="2000" oninput="updateCharCounter('cp${i}', 'counter_cp${i}')">${caseAnswers[`cp${i}`] || ''}</textarea>
+                        <div id="counter_cp${i}" class="char-counter"></div>
                     </div>`).join('')}
                 </div>
 
                 <div class="form-actions"><button type="submit" class="btn btn--primary">Enviar Evaluación</button></div>
             </form>
         </div>
+        <div id="examResultContainer" style="display:none;"></div>
         <div id="examResultActions" class="form-actions" style="display:none; justify-content: center; margin-top: 20px;">
             <button id="retryExamBtn" class="btn btn--primary">Reintentar Evaluación</button>
         </div>`;
+
+    caseStudy.preguntas.forEach((_, i) => updateCharCounter(`cp${i}`, `counter_cp${i}`));
+    
     document.getElementById('examForm').addEventListener('submit', submitFn);
     document.getElementById('retryExamBtn').addEventListener('click', () => {
-         renderEvaluationContent(document.getElementById('step5Content'), submitExam);
+         renderEvaluationContent(document.getElementById('step5Content'), submitFn);
     });
 }
 
 async function submitExam(e) {
     e.preventDefault();
-    showSpinner(true);
     const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    setButtonLoading(submitButton, true, 'Enviando...');
+    
     const formData = new FormData(form);
     const userAnswers = { mc: {}, case: {} };
     let score = 0;
@@ -389,9 +422,7 @@ async function submitExam(e) {
         if (userAnswer === q.correcta) score++;
     });
     appData.evaluacion.caso_practico.preguntas.forEach((cp, i) => userAnswers.case[`cp${i}`] = formData.get(`cp${i}`));
-
-    showExamResults(userAnswers.mc);
-
+    
     const progress = participantProgress[currentUser.dni];
     const newIntentos = (progress.eval_intentos || 0) + 1;
     const passed = score >= appData.configuracion.nota_minima_aprobacion;
@@ -403,30 +434,55 @@ async function submitExam(e) {
         answers_json: JSON.stringify(userAnswers) 
     };
     const response = await postDataToGoogleSheet('saveExamAttempt', attemptData);
+
+    // Update local progress data first for immediate UI feedback
+    progress.eval_intentos = newIntentos;
+    progress.eval_aprobado = progress.eval_aprobado || passed;
+    progress.step5_completed = progress.step5_completed || passed;
+    progress.last_case_answers = userAnswers.case;
+    if (passed && response.certificate_code) {
+        progress.certificate_code = response.certificate_code;
+        progress.final_score = score;
+    }
+
+    // Now, send the final complete progress object to be saved.
+    await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: progress });
     
-    showSpinner(false);
+    document.getElementById('examContainer').style.display = 'none';
+    
+    const resultContainer = document.getElementById('examResultContainer');
+    resultContainer.style.display = 'block';
+    resultContainer.innerHTML = appData.evaluacion.preguntas.map((q, i) => {
+        const isCorrect = userAnswers.mc[i] === q.correcta;
+        return `
+        <div class="question-item ${isCorrect ? 'correct' : 'incorrect'}">
+            <p class="question-text">${i + 1}. ${q.texto}</p>
+            <div class="question-options">
+            ${q.opciones.map((opt, j) => {
+                let className = 'option-item';
+                if (j === q.correcta) className += ' correct-answer';
+                if (j === userAnswers.mc[i] && !isCorrect) className += ' incorrect';
+                return `<div class="${className}"><span>${opt}</span></div>`;
+            }).join('')}
+            </div>
+        </div>`;
+    }).join('');
 
     if (passed) {
-        const certCode = response.certificate_code;
-        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${certCode}</strong><br>Podrás descargarlo en las próximas horas en el siguiente enlace: <a href="https://edunova.edu.pe/verify/" target="_blank">edunova.edu.pe/verify/</a>`);
-        await updateUserProgress('certificate_code', certCode);
-        await updateUserProgress('final_score', score);
+        showModal('¡Felicidades!', `¡Has aprobado con ${score}/${appData.evaluacion.preguntas.length}!<br><br><strong>Tu código de certificado es: ${response.certificate_code}</strong><br>Podrás descargarlo en las próximas horas en el siguiente enlace: <a href="https://edunova.edu.pe/verify/" target="_blank">edunova.edu.pe/verify/</a>`, () => {
+            updateCertificationSteps(); // This will refresh the entire view
+        });
     } else {
         const remaining = appData.configuracion.max_intentos_evaluacion - newIntentos;
         let message = `Tu puntaje es ${score}/${appData.evaluacion.preguntas.length}. Te quedan ${remaining} intentos.`;
         if (remaining > 0) {
             message += "<br><br><b>Haz clic en el botón 'Reintentar Evaluación' para hacerlo una vez más.</b>";
             document.getElementById('examResultActions').style.display = 'flex';
+        } else {
+            message += "<br><br><b>Has agotado todos tus intentos.</b>";
         }
         showModal('Intento Registrado', message);
     }
-
-    form.querySelectorAll('input, textarea, button').forEach(el => el.disabled = true);
-    
-    await updateUserProgress('eval_intentos', newIntentos);
-    await updateUserProgress('eval_aprobado', progress.eval_aprobado || passed);
-    await updateUserProgress('step5_completed', progress.step5_completed || passed);
-    await updateUserProgress('last_case_answers', userAnswers.case);
 }
 
 // --- DATA & UTILITIES ---
@@ -454,43 +510,67 @@ async function updateUserProgress(key, value) {
     await postDataToGoogleSheet('updateProgress', { dni: currentUser.dni, progressData: participantProgress[currentUser.dni] });
     updateCertificationSteps();
 }
-function showExamResults(userAnswers) {
-    appData.evaluacion.preguntas.forEach((q, i) => {
-        const correctAnswer = q.correcta;
-        document.querySelectorAll(`input[name="q${i}"]`).forEach((radio, j) => {
-            const label = radio.parentElement;
-            label.classList.remove('correct', 'incorrect', 'correct-answer');
-            if (j === correctAnswer) {
-                label.classList.add('correct-answer');
-            }
-            if (j === userAnswers[i]) {
-                label.classList.add(userAnswers[i] === correctAnswer ? 'correct' : 'incorrect');
-            }
-        });
-    });
-}
 function buildControlUnificado() {
     const map = new Map();
-    [...appData.matriculados, ...appData.nuevos_registros].forEach(p => {
-        if (p.dni) {
-            map.set(p.dni.toString(), { ...p, dni: p.dni.toString(), nombre_completo: `${p.nombres} ${p.apellidos}`.trim() });
-        }
-    });
+    // Ensure all DNI are strings for consistent matching
+    const processList = (list) => {
+        if (!Array.isArray(list)) return;
+        list.forEach(p => {
+            if (p.dni) {
+                const dniStr = p.dni.toString();
+                if (!map.has(dniStr)) {
+                    map.set(dniStr, { ...p, dni: dniStr, nombre_completo: `${p.nombres || ''} ${p.apellidos || ''}`.trim() });
+                }
+            }
+        });
+    };
+    processList(appData.matriculados);
+    processList(appData.nuevos_registros);
     controlUnificado = Array.from(map.values());
 }
+
+
 function initializeAllProgress() {
     controlUnificado.forEach(p => {
-        const existingProgress = appData.progreso.find(prog => prog.dni?.toString() === p.dni);
-        if (existingProgress?.datos_progreso) {
-            try { participantProgress[p.dni] = JSON.parse(existingProgress.datos_progreso); } catch { participantProgress[p.dni] = createDefaultProgress(p.dni); }
-        } else {
-            participantProgress[p.dni] = createDefaultProgress(p.dni);
+        // Start with a clean, default progress state.
+        let progressData = createDefaultProgress(p.dni);
+
+        const existingProgressRow = appData.progreso.find(prog => prog.dni?.toString() === p.dni?.toString());
+
+        if (existingProgressRow) {
+            // First, try to load the detailed state (comments, etc.) from the JSON blob.
+            if (existingProgressRow.datos_progreso) {
+                try {
+                    const savedProgress = JSON.parse(existingProgressRow.datos_progreso);
+                    // Merge the saved data into our default object.
+                    progressData = { ...progressData, ...savedProgress };
+                } catch (e) {
+                    console.warn(`Could not parse progress JSON for DNI ${p.dni}.`);
+                }
+            }
+
+            // CRITICAL: Now, override with the definitive status from individual columns.
+            // This ensures the main status is always correct, even if the JSON is outdated or corrupt.
+            if (existingProgressRow.estado_evaluacion === 'Aprobado') {
+                progressData.eval_aprobado = true;
+                progressData.step5_completed = true;
+            }
+
+            if (existingProgressRow.codigo_certificado) {
+                progressData.certificate_code = existingProgressRow.codigo_certificado;
+            }
         }
+        
+        participantProgress[p.dni] = progressData;
     });
 }
+
+
 function createDefaultProgress(dni) {
-    const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dni);
-    const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dni);
+    // Ensure DNI is a string
+    const dniStr = dni.toString();
+    const isAsistenteS1 = appData.asistentes_sesion1.some(a => a.dni?.toString() === dniStr);
+    const isAsistenteS2 = appData.asistentes_sesion2.some(a => a.dni?.toString() === dniStr);
     return {
         step1_completed: isAsistenteS1, step2_completed: false,
         step3_completed: isAsistenteS2, step4_completed: false,
@@ -500,10 +580,42 @@ function createDefaultProgress(dni) {
     };
 }
 
+
+function updateCharCounter(textAreaId, counterId) {
+    const textArea = document.getElementById(textAreaId);
+    const counter = document.getElementById(counterId);
+    if (textArea && counter) {
+        const maxLength = textArea.maxLength;
+        const currentLength = textArea.value.length;
+        counter.textContent = `${currentLength} / ${maxLength} caracteres`;
+    }
+}
+function setButtonLoading(button, isLoading, loadingText = 'Cargando...', defaultText) {
+    if (!button) return;
+    if (isLoading) {
+        if (!button.originalHTML) {
+            button.originalHTML = button.innerHTML;
+        }
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
+        button.disabled = true;
+    } else {
+        button.innerHTML = defaultText || button.originalHTML || 'Acción';
+        button.disabled = false;
+    }
+}
 function isStepCompleted(step) { return participantProgress[currentUser.dni]?.[`${step}_completed`]; }
 function handleLogout() { currentUser = null; showSection('loginSection'); }
 function updateStudentInfo() { document.getElementById('studentName').textContent = currentUser.nombre_completo; document.getElementById('studentDni').textContent = `DNI: ${currentUser.dni}`; }
-function updateCertificateSection() { const s = document.getElementById('certificateSection'); const p = participantProgress[currentUser.dni]; if (p?.certificate_code) { document.getElementById('certificateCode').textContent = p.certificate_code; s.style.display = 'block'; } else { s.style.display = 'none'; } }
+function updateCertificateSection() { 
+    const s = document.getElementById('certificateSection'); 
+    const p = participantProgress[currentUser.dni]; 
+    if (p && p.certificate_code) { 
+        document.getElementById('certificateCode').textContent = p.certificate_code; 
+        s.style.display = 'block'; 
+    } else { 
+        s.style.display = 'none'; 
+    } 
+}
 function showSpinner(show) { document.getElementById('loadingSpinner').style.display = show ? 'flex' : 'none'; }
 function setupModalControls() { const m = document.getElementById('messageModal'); document.getElementById('modalConfirm').onclick = () => m.classList.add('hidden'); document.getElementById('closeModal').onclick = () => m.classList.add('hidden'); }
 function showError(id, msg) { const e = document.getElementById(id); if (e) { e.querySelector('span').textContent = msg; e.style.display = 'block'; } }
@@ -517,5 +629,4 @@ function showModal(title, message, callback) {
         if (callback) callback();
     };
 }
-
 

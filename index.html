@@ -8,6 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+    <!-- Full screen loading spinner -->
     <div id="loadingSpinner" style="display: none;">
         <div class="spinner"></div>
     </div>
@@ -23,8 +24,13 @@
                     <h2>Desarrollo Infantil Temprano</h2>
                     <p>Portal de Certificación DIT - Completo</p>
                 </div>
-                <div class="access-buttons">
-                    <button id="adminBtn" class="btn btn--outline btn--sm"><i class="fas fa-shield-alt"></i> Admin</button>
+                <div class="header-actions">
+                     <a id="whatsappGroupBtn" href="#" class="btn btn--whatsapp btn--sm" target="_blank" style="display: none;">
+                        <i class="fab fa-whatsapp"></i> Únete a la Comunidad
+                    </a>
+                    <button id="adminBtn" class="btn btn--outline btn--sm">
+                        <i class="fas fa-shield-alt"></i> Admin
+                    </button>
                 </div>
             </div>
         </div>
@@ -43,9 +49,13 @@
                                 <label for="dniInput" class="form-label">DNI:</label>
                                 <input type="text" id="dniInput" class="form-control" placeholder="Ingrese su DNI (8 dígitos)" maxlength="8" pattern="[0-9]{8}" required>
                             </div>
-                            <button type="submit" class="btn btn--primary btn--full-width"><i class="fas fa-arrow-right"></i> Ingresar al Sistema</button>
+                            <button type="submit" class="btn btn--primary btn--full-width">
+                                <i class="fas fa-arrow-right"></i> Ingresar al Sistema
+                            </button>
                         </form>
-                        <div id="loginError" class="error-message" style="display: none;"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+                        <div id="loginError" class="error-message" style="display: none;">
+                            <i class="fas fa-exclamation-circle"></i> <span id="errorText">Error desconocido</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -54,17 +64,39 @@
             <section id="registroSection" class="section" style="display: none;">
                 <div class="card">
                     <div class="card__body">
-                         <h3><i class="fas fa-user-plus"></i> Registro Nuevo Participante</h3>
-                        <p>Complete el formulario para registrarse en el curso.</p>
+                        <h3><i class="fas fa-user-plus"></i> Registro Nuevo Participante</h3>
+                        <p>Su DNI no se encuentra en nuestra base de datos. Complete el registro para continuar.</p>
                         <form id="registroForm" class="form">
-                            <input type="hidden" id="regDni">
-                            <div class="form-group"><label>Nombres:*</label><input type="text" id="regNombres" class="form-control" required></div>
-                            <div class="form-group"><label>Apellidos:*</label><input type="text" id="regApellidos" class="form-control" required></div>
-                            <div class="form-group"><label>Celular:</label><input type="tel" id="regCelular" class="form-control"></div>
-                            <div class="form-group"><label>Email:*</label><input type="email" id="regEmail" class="form-control" required></div>
-                            <div class="form-group"><label>Residencia:*</label><input type="text" id="regResidencia" class="form-control" required></div>
-                            <div class="form-group"><label>Opción de Certificado:*</label><div id="certificateOptionsContainer" class="certificado-options"></div></div>
-                            <div class="form-group"><label class="checkbox-container"><input type="checkbox" id="regPrivacidad" required><span class="checkmark"></span><span>Acepto políticas de privacidad.</span></label></div>
+                            <div class="form-group">
+                                <label class="form-label">DNI:</label>
+                                <input type="text" id="regDni" class="form-control" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nombres:</label>
+                                <input type="text" id="regNombres" class="form-control" placeholder="Ingrese sus nombres" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Apellidos:</label>
+                                <input type="text" id="regApellidos" class="form-control" placeholder="Ingrese sus apellidos" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Celular (WhatsApp):</label>
+                                <input type="tel" id="regCelular" class="form-control" placeholder="Ej: 51987654321" maxlength="20" pattern="[0-9]*">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Correo Electrónico:</label>
+                                <input type="email" id="regEmail" class="form-control" placeholder="ejemplo@correo.com" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Lugar de Residencia:</label>
+                                <input type="text" id="regResidencia" class="form-control" placeholder="Ciudad, Departamento" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Opción de Certificado:</label>
+                                <div id="certificateOptionsContainer" class="certificado-options">
+                                    <!-- Options loaded dynamically -->
+                                </div>
+                            </div>
                             <div class="form-actions">
                                 <button type="button" id="backToLogin" class="btn btn--secondary">Cancelar</button>
                                 <button type="submit" class="btn btn--primary">Completar Registro</button>
@@ -74,48 +106,60 @@
                 </div>
             </section>
 
-            <!-- Certification Steps Section -->
+            <!-- Certification Steps -->
             <section id="certificationSteps" class="section" style="display: none;">
                 <div class="dashboard-header">
                     <div class="student-info">
                         <h3 id="studentName"></h3>
                         <p id="studentDni"></p>
                     </div>
-                    <button id="logoutBtn" class="btn btn--secondary"><i class="fas fa-sign-out-alt"></i> Salir</button>
+                    <button id="logoutBtn" class="btn btn--secondary btn--sm">
+                        <i class="fas fa-sign-out-alt"></i> Salir
+                    </button>
                 </div>
-                <div class="steps-container">
-                    <div id="step1" class="step-item"><div class="step-header"><div class="step-number">1</div><div class="step-title">Validación Sesión 1</div><div class="step-status" id="step1Status"></div></div><div class="step-actions" id="step1Actions" style="display:none;"><div id="step1Content"></div></div></div>
-                    <div id="step2" class="step-item"><div class="step-header"><div class="step-number">2</div><div class="step-title">Lecturas Módulo 1 (18h)</div><div class="step-status" id="step2Status"></div></div><div class="step-actions" id="step2Actions" style="display:none;"><div id="step2Content"></div></div></div>
-                    <div id="step3" class="step-item"><div class="step-header"><div class="step-number">3</div><div class="step-title">Validación Sesión 2</div><div class="step-status" id="step3Status"></div></div><div class="step-actions" id="step3Actions" style="display:none;"><div id="step3Content"></div></div></div>
-                    <div id="step4" class="step-item"><div class="step-header"><div class="step-number">4</div><div class="step-title">Lecturas Módulo 2 (18h)</div><div class="step-status" id="step4Status"></div></div><div class="step-actions" id="step4Actions" style="display:none;"><div id="step4Content"></div></div></div>
-                    <div id="step5" class="step-item"><div class="step-header"><div class="step-number">5</div><div class="step-title">Evaluación Final</div><div class="step-status" id="step5Status"></div></div><div class="step-actions" id="step5Actions" style="display:none;"><div id="step5Content"></div></div></div>
+
+                <div class="card progress-card">
+                    <div class="card__body">
+                        <h4><i class="fas fa-list-ol"></i> Proceso de Certificación DIT</h4>
+                        <div class="steps-container">
+                            <div id="step1" class="step-item"><div class="step-header"><div class="step-number">1</div><div class="step-title">Validación Sesión 1</div><div class="step-status" id="step1Status"></div></div><div class="step-actions" id="step1Actions" style="display:none;"><div id="step1Content"></div></div></div>
+                            <div id="step2" class="step-item"><div class="step-header"><div class="step-number">2</div><div class="step-title">Lectura Módulo 1</div><div class="step-status" id="step2Status"></div></div><div class="step-actions" id="step2Actions" style="display:none;"><div id="step2Content"></div></div></div>
+                            <div id="step3" class="step-item"><div class="step-header"><div class="step-number">3</div><div class="step-title">Validación Sesión 2</div><div class="step-status" id="step3Status"></div></div><div class="step-actions" id="step3Actions" style="display:none;"><div id="step3Content"></div></div></div>
+                            <div id="step4" class="step-item"><div class="step-header"><div class="step-number">4</div><div class="step-title">Lectura Módulo 2</div><div class="step-status" id="step4Status"></div></div><div class="step-actions" id="step4Actions" style="display:none;"><div id="step4Content"></div></div></div>
+                            <div id="step5" class="step-item"><div class="step-header"><div class="step-number">5</div><div class="step-title">Evaluación Final</div><div class="step-status" id="step5Status"></div></div><div class="step-actions" id="step5Actions" style="display:none;"><div id="step5Content"></div></div></div>
+                        </div>
+                         <div id="certificateSection" class="certificate-section" style="display: none;">
+                            <!-- Content is generated dynamically by app.js -->
+                         </div>
+                    </div>
                 </div>
-                 <div id="certificateSection" class="certificate-section" style="display: none;"><div class="certificate-card"><h4><i class="fas fa-certificate"></i> ¡Certificación Completada!</h4><p><strong>Su código de certificado es:</strong> <span id="certificateCode"></span></p><a href="https://edunova.edu.pe/verify/" target="_blank" class="btn btn--success">Verificar Certificado</a></div></div>
             </section>
-            
-            <!-- Admin Panel Section -->
+
+            <!-- Admin Panel -->
             <section id="adminPanel" class="section" style="display: none;">
-                <div class="admin-header">
+                 <div class="dashboard-header">
                     <h3><i class="fas fa-shield-alt"></i> Panel Administrativo</h3>
-                    <button id="backToLoginAdmin" class="btn btn--secondary"><i class="fas fa-arrow-left"></i> Salir</button>
+                    <button id="backToLoginAdmin" class="btn btn--secondary btn--sm">
+                        <i class="fas fa-sign-out-alt"></i> Salir
+                    </button>
                 </div>
-                <div class="stats-grid">
-                    <div class="card stat-card"><div class="card__body"><i class="fas fa-users"></i><div><h4 id="totalParticipants">0</h4><p>Participantes</p></div></div></div>
-                    <div class="card stat-card"><div class="card__body"><i class="fas fa-user-check"></i><div><h4 id="approvedCount">0</h4><p>Aprobados</p></div></div></div>
-                    <div class="card stat-card"><div class="card__body"><i class="fas fa-certificate"></i><div><h4 id="certificatesGenerated">0</h4><p>Certificados</p></div></div></div>
+                 <div class="stats-grid">
+                    <div class="card stat-card"><div class="card__body"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><h4 id="totalParticipants">0</h4><p>Total</p></div></div></div>
+                    <div class="card stat-card"><div class="card__body"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h4 id="approvedCount">0</h4><p>Aprobados</p></div></div></div>
+                    <div class="card stat-card"><div class="card__body"><div class="stat-icon"><i class="fas fa-certificate"></i></div><div class="stat-info"><h4 id="certificatesGenerated">0</h4><p>Certificados</p></div></div></div>
                 </div>
-                <div class="card">
+                 <div class="card">
                     <div class="card__body">
                         <div class="table-header">
                             <h4>Progreso de Participantes</h4>
-                            <button id="exportCsvBtn" class="btn btn--primary"><i class="fas fa-file-csv"></i> Exportar a CSV</button>
+                            <button id="exportCsvBtn" class="btn btn--success btn--sm"><i class="fas fa-file-csv"></i> Exportar a CSV</button>
                         </div>
                         <div class="table-container">
-                            <table id="progressTable">
+                            <table id="progressTable" class="table">
                                 <thead>
                                     <tr>
                                         <th>DNI</th>
-                                        <th>Nombre</th>
+                                        <th>Nombre Completo</th>
                                         <th>Paso 1</th>
                                         <th>Paso 2</th>
                                         <th>Paso 3</th>
@@ -133,7 +177,7 @@
     </main>
     
     <div id="messageModal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h4 id="modalTitle"></h4><button class="modal-close" id="closeModal"><i class="fas fa-times"></i></button></div><div class="modal-body"><div id="modalMessage"></div></div><div class="modal-footer"><button id="modalConfirm" class="btn btn--primary">OK</button></div></div></div>
-    <div id="passwordModal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h4 id="passwordTitle"></h4></div><div class="modal-body"><form id="passwordForm"><div class="form-group"><label>Contraseña:</label><input type="password" id="passwordInput" class="form-control" required></div><div id="passwordError" class="error-message" style="display:none;">Contraseña incorrecta</div><div class="form-actions"><button type="button" id="passwordCancel" class="btn btn--secondary">Cancelar</button><button type="submit" class="btn btn--primary">Ingresar</button></div></form></div></div></div>
+    <div id="passwordModal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h4 id="passwordTitle"></h4><button class="modal-close" id="closePasswordModal"><i class="fas fa-times"></i></button></div><div class="modal-body"><form id="passwordForm"><div class="form-group"><label>Contraseña:</label><input type="password" id="passwordInput" class="form-control" required></div><div id="passwordError" class="error-message" style="display:none;">Contraseña incorrecta</div></form></div><div class="modal-footer"><button type="button" id="passwordCancel" class="btn btn--secondary">Cancelar</button><button type="button" id="passwordSubmit" class="btn btn--primary">Ingresar</button></div></div></div>
 
     <script src="app.js"></script>
 </body>

@@ -603,16 +603,17 @@ function updateCertificateSection() {
     if (progress && progress.certificate_code) {
         const config = appData.configuracion;
         const certCode = progress.certificate_code;
-        const yape = config.yape_number || '994694751';
-        const contact = config.whatsapp_contact_number || '51982197128';
-        const text = encodeURIComponent(`Hola, deseo solicitar mi certificado físico. Mi código de certificado es ${certCode}. Adjunto mi comprobante de pago.`);
+        
+        const studentData = `\n- Nombre: ${currentUser.nombre_completo}\n- DNI: ${currentUser.dni}\n- Correo: ${currentUser.email || 'No especificado'}`;
+        const text = encodeURIComponent(`Hola, deseo solicitar mi certificado físico. Mis datos son:${studentData}\nMi código de certificado es ${certCode}. Adjunto mi comprobante de pago.`);
+        const contactNumber = config.whatsapp_contact_number || '51982197128';
 
         section.innerHTML = `
             <div class="certificate-card">
                 <h4><i class="fas fa-certificate"></i> ¡Certificación Completada!</h4>
                 <p>Su código de certificado es: <strong>${certCode}</strong></p>
                 <p>Su Certificado Digital Gratuito estará disponible para descarga en las próximas horas. Recibirá una notificación por correo y/o WhatsApp.</p>
-                <a href="https://edunova.edu.pe/verify/" target="_blank" class="btn btn--success" style="margin-top: 10px;">
+                <a href="${config.certificate_verification_link || '#'}" target="_blank" class="btn btn--success" style="margin-top: 10px;">
                     <i class="fas fa-check-circle"></i> Verificar Certificado en la Web
                 </a>
 
@@ -620,9 +621,9 @@ function updateCertificateSection() {
                     <h5>Opcional: Potencie su CV con el <strong>Certificado Físico con Triple Firma</strong></h5>
                     <p>Por una inversión de promoción de <strong>S/${config.cert_fisico_precio || '40.00'}</strong>, asegure su certificado impreso con el respaldo de la Cámara de Comercio de Huánuco y el Colegio de Sociólogos del Perú.</p>
                     <p><strong>¿Cómo solicitarlo?</strong><br>
-                    1. Realice el pago vía Yape al <strong>${yape}</strong> (Edunova Peru Sac).<br>
+                    1. Realice el pago vía Yape al <strong>${config.yape_number || '994694751'}</strong> (Edunova Peru Sac).<br>
                     2. Notifique su pago enviando el comprobante por WhatsApp.</p>
-                    <a href="https://wa.me/${contact}?text=${text}" target="_blank" class="btn btn--primary" style="margin-top: 10px;">
+                    <a href="https://wa.me/${contactNumber}?text=${text}" target="_blank" class="btn btn--primary" style="margin-top: 10px;">
                         <i class="fab fa-whatsapp"></i> <strong>Solicitar Certificado Físico por WhatsApp</strong>
                     </a>
                 </div>

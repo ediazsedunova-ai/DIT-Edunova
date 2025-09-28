@@ -300,7 +300,7 @@ function renderModuleContent(container, moduleIndex) {
                 <a href="${tema.lectura_url}" target="_blank" class="btn btn--secondary btn--sm">Leer artículo completo</a>
                 <div class="comment-form form-group">
                     <textarea class="form-control" id="comment_${tema.id}" 
-                              placeholder="Escriba su reflexión aquí (mínimo 50 caracteres)..." 
+                              placeholder="Escriba su reflexión aquí (mínimo 30 caracteres)..." 
                               maxlength="2000" 
                               oninput="updateCharCounter('comment_${tema.id}', 'counter_${tema.id}')">${progress.comments?.[tema.id] || ''}</textarea>
                     <div id="counter_${tema.id}" class="char-counter"></div>
@@ -321,7 +321,7 @@ function renderModuleContent(container, moduleIndex) {
         if (!progress.comments) progress.comments = {};
         module.temas.forEach(tema => {
             const comment = document.getElementById(`comment_${tema.id}`).value;
-            if (comment.trim().length < 50) {
+            if (comment.trim().length < 30) {
                 allValid = false;
             }
             progress.comments[tema.id] = comment;
@@ -330,7 +330,7 @@ function renderModuleContent(container, moduleIndex) {
             const stepKey = moduleIndex === 0 ? 'step2_completed' : 'step4_completed';
             await updateUserProgress(stepKey, true);
         } else {
-            showModal('Incompleto', 'Debe escribir una reflexión de al menos 50 caracteres para cada tema.');
+            showModal('Incompleto', 'Debe escribir una reflexión de al menos 30 caracteres para cada tema.');
             setButtonLoading(completeBtn, false, 'Guardar y Completar Módulo');
         }
     };
@@ -395,7 +395,7 @@ function renderEvaluationContent(container, submitFn) {
                     ${caseStudy.preguntas.map((cp, i) => `
                     <div class="form-group">
                         <label class="form-label"><strong>${i + 1}.</strong> ${cp}</label>
-                        <textarea name="cp${i}" id="cp${i}" class="form-control" rows="3" required minlength="50" maxlength="2000" oninput="updateCharCounter('cp${i}', 'counter_cp${i}')">${caseAnswers[`cp${i}`] || ''}</textarea>
+                        <textarea name="cp${i}" id="cp${i}" class="form-control" rows="3" required minlength="30" maxlength="2000" oninput="updateCharCounter('cp${i}', 'counter_cp${i}')">${caseAnswers[`cp${i}`] || ''}</textarea>
                         <div id="counter_cp${i}" class="char-counter"></div>
                     </div>`).join('')}
                 </div>
@@ -647,4 +647,5 @@ function showModal(title, message, callback) {
         if (callback) callback();
     };
 }
+
 

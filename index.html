@@ -178,8 +178,30 @@
     
     <div id="messageModal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h4 id="modalTitle"></h4><button class="modal-close" id="closeModal"><i class="fas fa-times"></i></button></div><div class="modal-body"><div id="modalMessage"></div></div><div class="modal-footer"><button id="modalConfirm" class="btn btn--primary">OK</button></div></div></div>
     <div id="passwordModal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h4 id="passwordTitle"></h4><button class="modal-close" id="closePasswordModal"><i class="fas fa-times"></i></button></div><div class="modal-body"><form id="passwordForm"><div class="form-group"><label>Contraseña:</label><input type="password" id="passwordInput" class="form-control" required></div><div id="passwordError" class="error-message" style="display:none;">Contraseña incorrecta</div></form></div><div class="modal-footer"><button type="button" id="passwordCancel" class="btn btn--secondary">Cancelar</button><button type="button" id="passwordSubmit" class="btn btn--primary">Ingresar</button></div></div></div>
+<script>
+    // 1. CAMBIA ESTA CONTRASEÑA POR LA QUE QUIERAS
+    const contraseñaCorrecta = "EdunovoAcceso2025"; 
 
+    // 2. Pide la contraseña al usuario cuando la página carga
+    const contraseñaIngresada = prompt("Para acceder al portal, por favor ingresa la clave:");
+
+    // 3. Verifica si la contraseña es incorrecta
+    if (contraseñaIngresada !== contraseñaCorrecta) {
+
+        // Si es incorrecta, oculta el contenido principal de la página
+        document.querySelector('header').style.display = 'none';
+        document.querySelector('main').style.display = 'none';
+
+        // Muestra un mensaje de alerta
+        alert("Contraseña incorrecta. Acceso denegado.");
+    }
+    // Si la contraseña es correcta, el script no hace nada y la página se muestra normalmente.
+</script>
+<script src="app.js"></script>
+</body>
+</html>
     <script src="app.js"></script>
 </body>
 </html>
+
 
